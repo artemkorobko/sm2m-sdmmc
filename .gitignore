@@ -1,4 +1,9 @@
 /target
+fp-lib-table
 *-backups
+_autosave*
+*auto_saved_files*
 fp-info-cache
+*.kicad_prl
+sym-lib-table
 .DS_Store
