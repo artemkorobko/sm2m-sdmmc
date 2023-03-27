@@ -1,0 +1,40 @@
+{
+    /* 
+     * Requires the Rust Language Server (rust-analyzer) and Cortex-Debug extensions
+     * https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer
+     * https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug
+     */
+    "version": "0.2.0",
+    "configurations": [
+        {
+            /* Configuration for the STM32F303 Discovery board */
+            "type": "cortex-debug",
+            "request": "launch",
+            "name": "Debug (OpenOCD)",
+            "servertype": "openocd",
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": "Cargo Build (debug)",
+            "runToEntryPoint": "main",
+            "executable": "./target/thumbv7m-none-eabihf/debug/{{project-name}}",
+            "device": "STM32F103C8T6",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32f1x.cfg"
+            ],
+            "svdFile": "${workspaceRoot}/STM32F103.svd",
+            "swoConfig": {
+                "enabled": true,
+                "cpuFrequency": 72000000,
+                "swoFrequency": 2000000,
+                "source": "probe",
+                "decoders": [
+                    {
+                        "type": "console",
+                        "label": "ITM",
+                        "port": 0
+                    }
+                ]
+            }
+        }
+    ]
+}

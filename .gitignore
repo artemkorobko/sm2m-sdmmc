@@ -7,3 +7,4 @@ fp-info-cache
 *.kicad_prl
 sym-lib-table
 .DS_Store
+*.bak

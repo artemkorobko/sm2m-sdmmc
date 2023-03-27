@@ -9,8 +9,10 @@ Based on [RTIC](https://rtic.rs/1/book/en/preface.html) framework.
 # Capabilities
 - Parallel interface which is fully compatible with old hardware.
 - MicroSD card support.
-- 16K buffer which increases IO operations with SD card.
+- 8K buffer which increases IO operations with SM2M bus.
 - Status LED indicators.
+
+The file name on SD card is formatted based on a 16 bit starting address (sent from SM2M) with `.bin` extention and has the following format `<address>.bin`. As an example, the file can be named starting form `0.bin` up to `65535.bin`.
 
 # Prerequisites
 ## Rust
@@ -86,3 +88,7 @@ In order to subsequent firmware upload run `cargo build`.
 cargo build --release && \
 openocd -f ./openocd.cfg -c "init" -c "reset init" -c "flash write_image erase ./target/thumbv7m-none-eabi/release/sm2m-sdmmc" -c "reset run" -c "exit"
 ```
+
+# Links
+
+https://github.com/rust-embedded/cortex-m-quickstart

@@ -14,5 +14,10 @@ break rust_begin_unwind
 monitor arm semihosting enable
 load
 
+# send captured ITM to the file itm.fifo
+# (the microcontroller SWO pin must be connected to the programmer SWO pin)
+# 72000000 must match the core clock frequency
+monitor tpiu config internal itm.txt uart off 72000000
+
 # start the process but immediately halt the processor
 stepi
