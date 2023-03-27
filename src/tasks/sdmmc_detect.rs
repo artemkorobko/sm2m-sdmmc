@@ -28,6 +28,16 @@ pub fn sdmmc_detect(cx: app::sdmmc_detect::Context) {
 }
 
 fn write(bus: &mut sdmmc::Bus, file: u16, buffer: sdmmc::Buffer) {
+    // read from SDMMC to BUS
+    // let chunk_size = 2;
+    // for chunk in buffer.chunks(chunk_size) {
+    //     if chunk.len() < chunk_size {
+    //         let word = chunk[0] as u16;
+    //     } else {
+    //         let word = chunk[0] as u16 | (chunk[1] as u16) << 8;
+    //     }
+    // }
+
     if let Ok(sdmmc_block) = bus.acquire() {
         let time_source = StaticTimeSource::default();
         let mut controller = embedded_sdmmc::Controller::new(sdmmc_block, time_source);

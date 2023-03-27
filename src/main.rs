@@ -11,7 +11,7 @@ mod peripherals;
 mod tasks;
 mod types;
 
-#[rtic::app(device = stm32f1xx_hal::pac, peripherals = true, dispatchers = [TAMPER])]
+#[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER])]
 mod app {
     use crate::types::{sdmmc, sm2m, status};
 
@@ -47,7 +47,7 @@ mod app {
         let rcc = cx.device.RCC.constrain();
         let clocks = rcc
             .cfgr
-            // .use_hse(16.MHz())
+            .use_hse(25.MHz())
             .sysclk(72.MHz())
             .pclk1(36.MHz())
             .pclk2(72.MHz())
@@ -60,9 +60,22 @@ mod app {
         let mut gpioe = cx.device.GPIOE.split();
 
         let sm2m_input_bus = sm2m::InputBus::new(
-            gpiob.pb5, gpiob.pb8, gpioe.pe1, gpioe.pe3, gpioe.pe5, gpioe.pe7, gpioe.pe9, gpiod.pd1,
-            gpiob.pb6, gpiob.pb7, gpiob.pb9, gpioe.pe2, gpioe.pe4, gpioe.pe6, gpioe.pe8,
-            gpioe.pe10,
+            gpiob.pb5.into_pull_down_input(&mut gpiob.crl),
+            gpiob.pb8.into_pull_down_input(&mut gpiob.crh),
+            gpioe.pe1.into_pull_down_input(&mut gpioe.crl),
+            gpioe.pe3.into_pull_down_input(&mut gpioe.crl),
+            gpioe.pe5.into_pull_down_input(&mut gpioe.crl),
+            gpioe.pe7.into_pull_down_input(&mut gpioe.crl),
+            gpioe.pe9.into_pull_down_input(&mut gpioe.crh),
+            gpiod.pd1.into_pull_down_input(&mut gpiod.crl),
+            gpiob.pb6.into_pull_down_input(&mut gpiob.crl),
+            gpiob.pb7.into_pull_down_input(&mut gpiob.crl),
+            gpiob.pb9.into_pull_down_input(&mut gpiob.crh),
+            gpioe.pe2.into_pull_down_input(&mut gpioe.crl),
+            gpioe.pe4.into_pull_down_input(&mut gpioe.crl),
+            gpioe.pe6.into_pull_down_input(&mut gpioe.crl),
+            gpioe.pe8.into_pull_down_input(&mut gpioe.crh),
+            gpioe.pe10.into_pull_down_input(&mut gpioe.crh),
         );
 
         let _ = gpiod.pd2; // КРО
@@ -97,37 +110,32 @@ mod app {
         let _ = gpioe.pe12.into_push_pull_output(&mut gpioe.crh); // ГТ-П
         let _ = gpioe.pe11.into_push_pull_output(&mut gpioe.crh); // ВНС
 
-        let status_led_1 = gpioc
-            .pc2
-            .into_push_pull_output_with_state(&mut gpioc.crl, gpio::PinState::High);
-        let status_led_2 = gpioc
-            .pc0
-            .into_push_pull_output_with_state(&mut gpioc.crl, gpio::PinState::High);
-        let status_led_3 = gpioc
-            .pc3
-            .into_push_pull_output_with_state(&mut gpioc.crl, gpio::PinState::High);
-        let status_led_4 = gpioa
-            .pa3
-            .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High);
-        let status_led_5 = gpioa
-            .pa0
-            .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High);
-        let status_led_6 = gpioa
-            .pa6
-            .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High);
         let status_display = status::Display::new(
-            status_led_1,
-            status_led_2,
-            status_led_3,
-            status_led_4,
-            status_led_5,
-            status_led_6,
+            gpioc
+                .pc2
+                .into_push_pull_output_with_state(&mut gpioc.crl, gpio::PinState::High),
+            gpioc
+                .pc0
+                .into_push_pull_output_with_state(&mut gpioc.crl, gpio::PinState::High),
+            gpioc
+                .pc3
+                .into_push_pull_output_with_state(&mut gpioc.crl, gpio::PinState::High),
+            gpioa
+                .pa3
+                .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High),
+            gpioa
+                .pa0
+                .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High),
+            gpioa
+                .pa6
+                .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High),
         );
 
-        let sdmmc_detect_led_pin = gpiod
-            .pd7
-            .into_push_pull_output_with_state(&mut gpiod.crl, gpio::PinState::Low);
-        let sdmmc_detect_led = sdmmc::DetectLed::new(sdmmc_detect_led_pin);
+        let sdmmc_detect_led = sdmmc::DetectLed::new(
+            gpiod
+                .pd7
+                .into_push_pull_output_with_state(&mut gpiod.crl, gpio::PinState::Low),
+        );
 
         let mut sdmmc_detect_pin = gpioe.pe0.into_pull_up_input(&mut gpioe.crl);
         sdmmc_detect_pin.make_interrupt_source(&mut afio);

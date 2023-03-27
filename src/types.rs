@@ -87,22 +87,22 @@ pub mod sm2m {
         OutputBusBit15Pin,
     >;
 
-    pub type InputBusBit0Pin = gpio::PB5<gpio::Input>;
-    pub type InputBusBit1Pin = gpio::PB8<gpio::Input>;
-    pub type InputBusBit2Pin = gpio::PE1<gpio::Input>;
-    pub type InputBusBit3Pin = gpio::PE3<gpio::Input>;
-    pub type InputBusBit4Pin = gpio::PE5<gpio::Input>;
-    pub type InputBusBit5Pin = gpio::PE7<gpio::Input>;
-    pub type InputBusBit6Pin = gpio::PE9<gpio::Input>;
-    pub type InputBusBit7Pin = gpio::PD1<gpio::Input>;
-    pub type InputBusBit8Pin = gpio::PB6<gpio::Input>;
-    pub type InputBusBit9Pin = gpio::PB7<gpio::Input>;
-    pub type InputBusBit10Pin = gpio::PB9<gpio::Input>;
-    pub type InputBusBit11Pin = gpio::PE2<gpio::Input>;
-    pub type InputBusBit12Pin = gpio::PE4<gpio::Input>;
-    pub type InputBusBit13Pin = gpio::PE6<gpio::Input>;
-    pub type InputBusBit14Pin = gpio::PE8<gpio::Input>;
-    pub type InputBusBit15Pin = gpio::PE10<gpio::Input>;
+    pub type InputBusBit0Pin = gpio::PB5<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit1Pin = gpio::PB8<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit2Pin = gpio::PE1<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit3Pin = gpio::PE3<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit4Pin = gpio::PE5<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit5Pin = gpio::PE7<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit6Pin = gpio::PE9<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit7Pin = gpio::PD1<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit8Pin = gpio::PB6<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit9Pin = gpio::PB7<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit10Pin = gpio::PB9<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit11Pin = gpio::PE2<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit12Pin = gpio::PE4<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit13Pin = gpio::PE6<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit14Pin = gpio::PE8<gpio::Input<gpio::PullDown>>;
+    pub type InputBusBit15Pin = gpio::PE10<gpio::Input<gpio::PullDown>>;
 
     pub type InputReserved1 = gpio::PD2<gpio::Output>; // КРО
     pub type InputReserved2 = gpio::PD3<gpio::Output>; // КР1
