@@ -9,7 +9,7 @@ use crate::{
 
 pub fn sdmmc_detect(cx: app::sdmmc_detect::Context) {
     let timer = cx.local.timer;
-    let sdmmc_detect_led = cx.local.sdmmc_detect_led;
+    let sdmmc_absent_led = cx.local.sdmmc_absent_led;
     let sdmmc_detect_pin = cx.local.sdmmc_detect_pin;
     let mut sdmmc_attached_flag = cx.shared.sdmmc_attached_flag;
     let is_sdmmc_attached = sdmmc_detect_pin.is_high();
@@ -19,9 +19,9 @@ pub fn sdmmc_detect(cx: app::sdmmc_detect::Context) {
     });
 
     if is_sdmmc_attached {
-        sdmmc_detect_led.off();
+        sdmmc_absent_led.off();
     } else {
-        sdmmc_detect_led.on();
+        sdmmc_absent_led.on();
     }
 
     timer.clear_interrupt(Event::Update);

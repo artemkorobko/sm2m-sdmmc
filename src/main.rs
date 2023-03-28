@@ -13,7 +13,7 @@ mod types;
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER])]
 mod app {
-    use crate::types::{sdmmc, sm2m, status};
+    use crate::types::{sdmmc, status};
 
     use crate::tasks::*;
 
@@ -28,16 +28,16 @@ mod app {
     struct Shared {
         sdmmc_spi: sdmmc::Bus,
         sdmmc_attached_flag: bool,
-        status_display: status::Display,
+        // status_display: status::Display,
     }
 
     #[local]
     struct Local {
         timer: timer::CounterMs<pac::TIM1>,
-        sm2m_input_bus: sm2m::InputBus,
-        sm2m_output_bus: sm2m::OutputBus,
+        // sm2m_input_bus: sm2m::InputBus,
+        // sm2m_output_bus: sm2m::OutputBus,
         sdmmc_detect_pin: sdmmc::DetectPin,
-        sdmmc_detect_led: sdmmc::DetectLed,
+        sdmmc_absent_led: sdmmc::DetectLed,
     }
 
     #[init]
@@ -53,91 +53,73 @@ mod app {
             .pclk2(72.MHz())
             .freeze(&mut flash.acr);
 
+        cx.device.GPIOA.crl.write(|w| unsafe { w.bits(0) });
+
         let mut gpioa = cx.device.GPIOA.split();
         let mut gpiob = cx.device.GPIOB.split();
         let mut gpioc = cx.device.GPIOC.split();
         let mut gpiod = cx.device.GPIOD.split();
         let mut gpioe = cx.device.GPIOE.split();
 
-        let sm2m_input_bus = sm2m::InputBus::new(
-            gpiob.pb5.into_pull_down_input(&mut gpiob.crl),
-            gpiob.pb8.into_pull_down_input(&mut gpiob.crh),
-            gpioe.pe1.into_pull_down_input(&mut gpioe.crl),
-            gpioe.pe3.into_pull_down_input(&mut gpioe.crl),
-            gpioe.pe5.into_pull_down_input(&mut gpioe.crl),
-            gpioe.pe7.into_pull_down_input(&mut gpioe.crl),
-            gpioe.pe9.into_pull_down_input(&mut gpioe.crh),
-            gpiod.pd1.into_pull_down_input(&mut gpiod.crl),
-            gpiob.pb6.into_pull_down_input(&mut gpiob.crl),
-            gpiob.pb7.into_pull_down_input(&mut gpiob.crl),
-            gpiob.pb9.into_pull_down_input(&mut gpiob.crh),
-            gpioe.pe2.into_pull_down_input(&mut gpioe.crl),
-            gpioe.pe4.into_pull_down_input(&mut gpioe.crl),
-            gpioe.pe6.into_pull_down_input(&mut gpioe.crl),
-            gpioe.pe8.into_pull_down_input(&mut gpioe.crh),
-            gpioe.pe10.into_pull_down_input(&mut gpioe.crh),
-        );
+        let (pa15, _pb3, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
 
-        let _ = gpiod.pd2; // КРО
-        let _ = gpiod.pd3; // КР1
-        let _ = gpiod.pd4; // ВП-И
-        let _ = gpiod.pd5; // ВПИП
-        let _ = gpiod.pd7; // ОСТ-ИП
-        let _ = gpiod.pd6; // ОСБ-И
+        // Configure input bus pins
+        gpiob.pb6.into_pull_down_input(&mut gpiob.crl); // Data_Bus_Input_00
+        gpioe.pe0.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_01
+        gpiob.pb9.into_pull_down_input(&mut gpiob.crh); // Data_Bus_Input_02
+        gpioe.pe1.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_03
+        gpioe.pe2.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_04
+        gpioe.pe4.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_05
+        gpioe.pe3.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_06
+        gpioe.pe5.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_07
+        pb4.into_pull_down_input(&mut gpiob.crl); // Data_Bus_Input_08
+        gpiod.pd6.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_09
+        gpiod.pd5.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_10
+        gpiod.pd7.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_11
+        gpiod.pd4.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_12
+        gpiod.pd1.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_13
+        gpiod.pd3.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_14
+        gpiod.pd0.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_15
+        gpiob.pb8.into_pull_down_input(&mut gpiob.crh); // Reset_Input
+        gpiod.pd2.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_Control_0
+        gpiob.pb7.into_pull_down_input(&mut gpiob.crl); // Data_Bus_Input_Control_1
+        gpiob.pb14.into_pull_down_input(&mut gpiob.crh); // Data_Transfer_Control_Completed_Input
+        gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // Data_Transfer_Long_Input
+        gpiob.pb11.into_pull_down_input(&mut gpiob.crh); // Data_Transfer_Short_Input
 
-        let sm2m_output_bus = sm2m::OutputBus::new(
-            gpioe.pe14.into_push_pull_output(&mut gpioe.crh),
-            gpioa.pa11.into_push_pull_output(&mut gpioa.crh),
-            gpioa.pa9.into_push_pull_output(&mut gpioa.crh),
-            gpioc.pc9.into_push_pull_output(&mut gpioc.crh),
-            gpioc.pc7.into_push_pull_output(&mut gpioc.crl),
-            gpiod.pd15.into_push_pull_output(&mut gpiod.crh),
-            gpiod.pd13.into_push_pull_output(&mut gpiod.crh),
-            gpiod.pd11.into_push_pull_output(&mut gpiod.crh),
-            gpiod.pd0.into_push_pull_output(&mut gpiod.crl),
-            gpioa.pa12.into_push_pull_output(&mut gpioa.crh),
-            gpioa.pa10.into_push_pull_output(&mut gpioa.crh),
-            gpioa.pa8.into_push_pull_output(&mut gpioa.crh),
-            gpioc.pc8.into_push_pull_output(&mut gpioc.crh),
-            gpioc.pc6.into_push_pull_output(&mut gpioc.crl),
-            gpiod.pd14.into_push_pull_output(&mut gpiod.crh),
-            gpiod.pd12.into_push_pull_output(&mut gpiod.crh),
-        );
+        // Configure output bus pins
+        gpioc.pc10.into_pull_down_input(&mut gpioc.crh); // Data_Bus_Output_00
+        gpioa.pa12.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_01
+        gpioa.pa10.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_02
+        gpioa.pa8.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_03
+        gpioc.pc9.into_pull_down_input(&mut gpioc.crh); // Data_Bus_Output_04
+        gpioc.pc8.into_pull_down_input(&mut gpioc.crh); // Data_Bus_Output_05
+        gpioc.pc7.into_pull_down_input(&mut gpioc.crl); // Data_Bus_Output_06
+        gpiod.pd15.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_07
+        gpiod.pd14.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_08
+        gpioc.pc6.into_pull_down_input(&mut gpioc.crl); // Data_Bus_Output_09
+        gpiod.pd13.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_10
+        gpiod.pd8.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_11
+        gpiod.pd11.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_12
+        gpiod.pd12.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_13
+        gpiob.pb15.into_pull_down_input(&mut gpiob.crh); // Data_Bus_Output_14
+        gpiod.pd9.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_15
+        gpiod.pd10.into_pull_down_input(&mut gpiod.crh); // Ready_Output
+        gpioe.pe6.into_pull_down_input(&mut gpioe.crl); // External_Set_Output
+        gpiob.pb12.into_pull_down_input(&mut gpiob.crh); // External_Reset_Output
+        pa15.into_pull_down_input(&mut gpioa.crh); // External_Error_Output
+        gpioc.pc12.into_pull_down_input(&mut gpioc.crh); // Data_Bus_Output_Control_State
+        gpioa.pa11.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_Control_0
+        gpioa.pa9.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_Control_1
+        gpioc.pc11.into_pull_down_input(&mut gpioc.crh); // Data_Transfer_Completed_Output
 
-        let _ = gpiob.pb14.into_push_pull_output(&mut gpiob.crh); // КРО
-        let _ = gpiob.pb15.into_push_pull_output(&mut gpiob.crh); // КР1
-        let _ = gpiob.pb10.into_push_pull_output(&mut gpiob.crh); // ВНУ
-        let _ = gpioe.pe12.into_push_pull_output(&mut gpioe.crh); // ГТ-П
-        let _ = gpioe.pe11.into_push_pull_output(&mut gpioe.crh); // ВНС
-
-        let status_display = status::Display::new(
-            gpioc
-                .pc2
-                .into_push_pull_output_with_state(&mut gpioc.crl, gpio::PinState::High),
-            gpioc
-                .pc0
-                .into_push_pull_output_with_state(&mut gpioc.crl, gpio::PinState::High),
-            gpioc
-                .pc3
-                .into_push_pull_output_with_state(&mut gpioc.crl, gpio::PinState::High),
-            gpioa
-                .pa3
-                .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High),
+        let sdmmc_absent_led = sdmmc::DetectLed::new(
             gpioa
                 .pa0
-                .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High),
-            gpioa
-                .pa6
-                .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High),
+                .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::Low),
         );
 
-        let sdmmc_detect_led = sdmmc::DetectLed::new(
-            gpiod
-                .pd7
-                .into_push_pull_output_with_state(&mut gpiod.crl, gpio::PinState::Low),
-        );
-
-        let mut sdmmc_detect_pin = gpioe.pe0.into_pull_up_input(&mut gpioe.crl);
+        let mut sdmmc_detect_pin = gpioa.pa3.into_pull_up_input(&mut gpioa.crl);
         sdmmc_detect_pin.make_interrupt_source(&mut afio);
         sdmmc_detect_pin.enable_interrupt(&mut cx.device.EXTI);
         sdmmc_detect_pin.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::RisingFalling);
@@ -147,11 +129,11 @@ mod app {
         timer.listen(timer::Event::Update);
 
         let sdmmc_cs_pin = gpioa.pa4.into_push_pull_output(&mut gpioa.crl);
-        let sdmmc_mosi_pin = gpioc.pc12.into_alternate_push_pull(&mut gpioc.crh);
-        let sdmmc_sck_pin = gpioc.pc10.into_alternate_push_pull(&mut gpioc.crh);
-        let sdmmc_miso_pin = gpioc.pc11;
-        let sdmmc_spi = spi::Spi::spi3(
-            cx.device.SPI3,
+        let sdmmc_mosi_pin = gpioa.pa7.into_alternate_push_pull(&mut gpioa.crl);
+        let sdmmc_sck_pin = gpioa.pa5.into_alternate_push_pull(&mut gpioa.crl);
+        let sdmmc_miso_pin = gpioa.pa6;
+        let sdmmc_spi = spi::Spi::spi1(
+            cx.device.SPI1,
             (sdmmc_sck_pin, sdmmc_miso_pin, sdmmc_mosi_pin),
             &mut afio.mapr,
             spi::Mode {
@@ -166,15 +148,15 @@ mod app {
         (
             Shared {
                 sdmmc_spi,
-                status_display,
+                // status_display,
                 sdmmc_attached_flag: false,
             },
             Local {
                 timer,
-                sm2m_input_bus,
-                sm2m_output_bus,
+                // sm2m_input_bus,
+                // sm2m_output_bus,
                 sdmmc_detect_pin,
-                sdmmc_detect_led,
+                sdmmc_absent_led,
             },
             init::Monotonics(),
         )
@@ -188,7 +170,7 @@ mod app {
     }
 
     extern "Rust" {
-        #[task(binds = TIM1_UP, local = [timer, sdmmc_detect_pin, sdmmc_detect_led], shared = [sdmmc_spi, sdmmc_attached_flag])]
+        #[task(binds = TIM1_UP, local = [timer, sdmmc_detect_pin, sdmmc_absent_led], shared = [sdmmc_spi, sdmmc_attached_flag])]
         fn sdmmc_detect(_: sdmmc_detect::Context);
     }
 }

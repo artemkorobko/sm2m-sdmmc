@@ -23,6 +23,6 @@ bench = false
 opt-level = 1
 
 [profile.release]
-opt-level = "s"
+opt-level = 3
 codegen-units = 1
 lto = true
