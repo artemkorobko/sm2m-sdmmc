@@ -14,28 +14,6 @@ pub mod sdmmc {
     pub type SpiBus = spi::Spi<pac::SPI1, spi::Spi1NoRemap, SpiPins, u8>;
     pub type Bus = embedded_sdmmc::SdMmcSpi<SpiBus, CS>;
 
-    pub const BUFFER_SIZE: usize = 8192;
+    pub const BUFFER_SIZE: usize = 1024 * 10;
     pub type Buffer = heapless::Vec<u8, BUFFER_SIZE>;
-}
-
-pub mod status {
-    use stm32f1xx_hal::gpio;
-
-    use crate::peripherals::status;
-
-    pub type StatusLed1Pin = gpio::PC2<gpio::Output>;
-    pub type StatusLed2Pin = gpio::PC0<gpio::Output>;
-    pub type StatusLed3Pin = gpio::PC3<gpio::Output>;
-    pub type StatusLed4Pin = gpio::PA3<gpio::Output>;
-    pub type StatusLed5Pin = gpio::PA0<gpio::Output>;
-    pub type StatusLed6Pin = gpio::PA6<gpio::Output>;
-
-    pub type Display = status::Display<
-        StatusLed1Pin,
-        StatusLed2Pin,
-        StatusLed3Pin,
-        StatusLed4Pin,
-        StatusLed5Pin,
-        StatusLed6Pin,
-    >;
 }

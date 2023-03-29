@@ -1,15 +1,15 @@
 # SM2M SDMMC
 
-Hard drive replacement solution for SM2M computing units based on STM32F107VCT6 microcontroller with SD card.
+Hard drive replacement solution for SM2M computing units based on STM32F103VBT6 MCU.
 
-This solution implements default communication protocol for easy switch between existing old hard drive and new one which uses SD card as main storage.
+This solution implements default communication protocol for easy switch between existing mechanical hard drive and new one which uses SD card as a main storage.
 
-Based on [RTIC](https://rtic.rs/1/book/en/preface.html) framework.
+Software implementation is based on [RTIC](https://rtic.rs/1/book/en/preface.html) framework.
 
 # Capabilities
-- Parallel interface which is fully compatible with old hardware.
+- 16-bit Parallel interface.
 - MicroSD card support.
-- 8K buffer which increases IO operations with SM2M bus.
+- 10K internal buffer.
 - Status LED indicators.
 
 The file name on SD card is formatted based on a 16 bit starting address (sent from SM2M) with `.bin` extention and has the following format `<address>.bin`. As an example, the file can be named starting form `0.bin` up to `65535.bin`.

@@ -13,7 +13,7 @@ mod types;
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER])]
 mod app {
-    use crate::types::{sdmmc, status};
+    use crate::types::sdmmc;
 
     use crate::tasks::*;
 
@@ -34,6 +34,7 @@ mod app {
     #[local]
     struct Local {
         timer: timer::CounterMs<pac::TIM1>,
+        trigger: gpio::PB13<gpio::Input<gpio::PullDown>>,
         // sm2m_input_bus: sm2m::InputBus,
         // sm2m_output_bus: sm2m::OutputBus,
         sdmmc_detect_pin: sdmmc::DetectPin,
@@ -84,7 +85,10 @@ mod app {
         gpiod.pd2.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_Control_0
         gpiob.pb7.into_pull_down_input(&mut gpiob.crl); // Data_Bus_Input_Control_1
         gpiob.pb14.into_pull_down_input(&mut gpiob.crh); // Data_Transfer_Control_Completed_Input
-        gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // Data_Transfer_Long_Input
+        let mut trigger = gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // Data_Transfer_Long_Input
+        trigger.make_interrupt_source(&mut afio);
+        trigger.enable_interrupt(&mut cx.device.EXTI);
+        trigger.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
         gpiob.pb11.into_pull_down_input(&mut gpiob.crh); // Data_Transfer_Short_Input
 
         // Configure output bus pins
@@ -153,6 +157,7 @@ mod app {
             },
             Local {
                 timer,
+                trigger,
                 // sm2m_input_bus,
                 // sm2m_output_bus,
                 sdmmc_detect_pin,
@@ -165,12 +170,14 @@ mod app {
     #[idle]
     fn idle(_: idle::Context) -> ! {
         loop {
-            cortex_m::asm::wfi()
+            cortex_m::asm::wfi();
         }
     }
 
     extern "Rust" {
         #[task(binds = TIM1_UP, local = [timer, sdmmc_detect_pin, sdmmc_absent_led], shared = [sdmmc_spi, sdmmc_attached_flag])]
         fn sdmmc_detect(_: sdmmc_detect::Context);
+        #[task(binds = EXTI0, local = [trigger])]
+        fn trigger(_: trigger::Context);
     }
 }
