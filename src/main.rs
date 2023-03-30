@@ -46,7 +46,7 @@ mod app {
         let rcc = cx.device.RCC.constrain();
         let clocks = rcc
             .cfgr
-            .use_hse(25.MHz())
+            .use_hse(16.MHz())
             .sysclk(72.MHz())
             .pclk1(36.MHz())
             .pclk2(72.MHz())
