@@ -52,8 +52,6 @@ mod app {
             .pclk2(72.MHz())
             .freeze(&mut flash.acr);
 
-        cx.device.GPIOA.crl.write(|w| unsafe { w.bits(0) });
-
         let mut gpioa = cx.device.GPIOA.split();
         let mut gpiob = cx.device.GPIOB.split();
         let mut gpioc = cx.device.GPIOC.split();
