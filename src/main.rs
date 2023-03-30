@@ -12,7 +12,7 @@ mod peripherals;
 mod state;
 mod tasks;
 
-#[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER])]
+#[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER, PVD, CAN_RX1, CAN_SCE])]
 mod app {
     use crate::peripherals::*;
     use crate::state::AppState;
