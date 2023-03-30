@@ -2,13 +2,13 @@ use core::ops::{Deref, DerefMut};
 
 use stm32f1xx_hal::{gpio, pac, spi};
 
-pub type CS = gpio::PA4<gpio::Output>;
-pub type SCK = gpio::PA5<gpio::Alternate>;
-pub type MISO = gpio::PA6;
-pub type MOSI = gpio::PA7<gpio::Alternate>;
-pub type SpiPins = (SCK, MISO, MOSI);
+pub type Cs = gpio::PA4<gpio::Output>;
+pub type Sck = gpio::PA5<gpio::Alternate>;
+pub type Miso = gpio::PA6;
+pub type Mosi = gpio::PA7<gpio::Alternate>;
+pub type SpiPins = (Sck, Miso, Mosi);
 pub type SpiBus = spi::Spi<pac::SPI1, spi::Spi1NoRemap, SpiPins, u8>;
-pub type SdMmcSpi = embedded_sdmmc::SdMmcSpi<SpiBus, CS>;
+pub type SdMmcSpi = embedded_sdmmc::SdMmcSpi<SpiBus, Cs>;
 
 pub struct Card(SdMmcSpi);
 
@@ -19,7 +19,7 @@ impl From<SdMmcSpi> for Card {
 }
 
 impl Deref for Card {
-    type Target = embedded_sdmmc::SdMmcSpi<SpiBus, CS>;
+    type Target = SdMmcSpi;
 
     fn deref(&self) -> &Self::Target {
         &self.0

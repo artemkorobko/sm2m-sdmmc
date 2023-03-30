@@ -1,86 +1,21 @@
 use rtic::mutex_prelude::*;
 use stm32f1xx_hal::timer::Event;
 
-use crate::{
-    app,
-    buffer::Buffer,
-    peripherals::sdmmc::{AsFileName, Card, StaticTimeSource},
-};
+use crate::{app, state::AppState};
 
-pub fn sdmmc_detect(cx: app::sdmmc_detect::Context) {
-    let timer = cx.local.timer;
-    // let sdmmc_absent_led = cx.local.sdmmc_absent_led;
-    // let sdmmc_detect_pin = cx.local.sdmmc_detect_pin;
-    let mut sdmmc_attached_flag = cx.shared.sdmmc_attached_flag;
-    // let is_sdmmc_attached = sdmmc_detect_pin.is_high();
+pub fn sdmmc_detect(mut cx: app::sdmmc_detect::Context) {
+    let is_sdmmc_attached = cx.local.sdmmc_detect_pin.is_high();
+    let detached_indicator = cx.local.sdmmc_detached_led;
 
-    // sdmmc_attached_flag.lock(|sdmmc_attached_flag| {
-    //     *sdmmc_attached_flag = is_sdmmc_attached;
-    // });
-
-    // if is_sdmmc_attached {
-    //     sdmmc_absent_led.off();
-    // } else {
-    //     sdmmc_absent_led.on();
-    // }
-
-    timer.clear_interrupt(Event::Update);
-}
-
-fn write(bus: &mut Card, file: u16, buffer: Buffer) {
-    // read from SDMMC to BUS
-    // let chunk_size = 2;
-    // for chunk in buffer.chunks(chunk_size) {
-    //     if chunk.len() < chunk_size {
-    //         let word = chunk[0] as u16;
-    //     } else {
-    //         let word = chunk[0] as u16 | (chunk[1] as u16) << 8;
-    //     }
-    // }
-
-    if let Ok(sdmmc_block) = bus.acquire() {
-        let time_source = StaticTimeSource::default();
-        let mut controller = embedded_sdmmc::Controller::new(sdmmc_block, time_source);
-        if let Ok(mut volume) = controller.get_volume(embedded_sdmmc::VolumeIdx(0)) {
-            if let Ok(dir) = controller.open_root_dir(&volume) {
-                let file_name = file.as_file_name();
-                let file_mode = embedded_sdmmc::Mode::ReadWriteCreateOrTruncate;
-                if let Ok(mut file) =
-                    controller.open_file_in_dir(&mut volume, &dir, file_name.as_str(), file_mode)
-                {
-                    if controller
-                        .write(&mut volume, &mut file, buffer.as_slice())
-                        .is_ok()
-                    {
-                        // Write completed
-                    } else {
-                        // Unablee to write to file
-                    }
-                    controller.close_file(&volume, file).ok();
-                    controller.close_dir(&volume, dir);
-                } else {
-                    // Unable to open file
-                }
-            } else {
-                // SDMMC does not have a root directory
-            }
-        } else {
-            // SDMMC has no volumes
+    cx.shared.state.lock(|state| {
+        if *state == AppState::NotReady && is_sdmmc_attached {
+            detached_indicator.set_high();
+            *state = AppState::Ready;
+        } else if *state != AppState::NotReady && !is_sdmmc_attached {
+            detached_indicator.set_low();
+            *state = AppState::NotReady;
         }
-    } else {
-        // SDMMC is not accessible
-    }
-}
+    });
 
-// fn write_to<D, T>(
-//     controller: &mut embedded_sdmmc::Controller<D, T>,
-//     volume: &mut embedded_sdmmc::Volume,
-//     file: &mut embedded_sdmmc::File,
-//     buffer: &BlockBuffer,
-// ) -> Result<usize, embedded_sdmmc::Error<<D as embedded_sdmmc::BlockDevice>::Error>>
-// where
-//     D: embedded_sdmmc::BlockDevice,
-//     T: embedded_sdmmc::TimeSource,
-// {
-//     controller.write(volume, file, buffer.as_slice())
-// }
+    cx.local.timer.clear_interrupt(Event::Update);
+}

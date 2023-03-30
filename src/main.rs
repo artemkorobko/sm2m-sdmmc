@@ -9,11 +9,13 @@ use panic_halt as _;
 
 mod buffer;
 mod peripherals;
+mod state;
 mod tasks;
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER])]
 mod app {
     use crate::peripherals::*;
+    use crate::state::AppState;
     use crate::tasks::*;
 
     use stm32f1xx_hal::{
@@ -25,19 +27,16 @@ mod app {
 
     #[shared]
     struct Shared {
+        state: AppState,
         card: sdmmc::Card,
-        sdmmc_attached_flag: bool,
-        // status_display: status::Display,
     }
 
     #[local]
     struct Local {
         timer: timer::CounterMs<pac::TIM1>,
         trigger: gpio::PB13<gpio::Input<gpio::PullDown>>,
-        // sm2m_input_bus: sm2m::InputBus,
-        // sm2m_output_bus: sm2m::OutputBus,
-        // sdmmc_detect_pin: sdmmc::DetectPin,
-        // sdmmc_absent_led: sdmmc::DetectLed,
+        sdmmc_detect_pin: gpio::PA3<gpio::Input<gpio::PullUp>>,
+        sdmmc_detached_led: gpio::PA0<gpio::Output>,
     }
 
     #[init]
@@ -116,11 +115,9 @@ mod app {
         gpioa.pa9.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_Control_1
         gpioc.pc11.into_pull_down_input(&mut gpioc.crh); // Data_Transfer_Completed_Output
 
-        // let sdmmc_absent_led = sdmmc::DetectLed::new(
-        //     gpioa
-        //         .pa0
-        //         .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::Low),
-        // );
+        let sdmmc_detached_led = gpioa
+            .pa0
+            .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::Low);
 
         let mut sdmmc_detect_pin = gpioa.pa3.into_pull_up_input(&mut gpioa.crl);
         sdmmc_detect_pin.make_interrupt_source(&mut afio);
@@ -146,21 +143,17 @@ mod app {
             100.kHz(),
             clocks,
         );
-        let sdmmc_spi = embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin);
 
         (
             Shared {
-                card: sdmmc_spi.into(),
-                // status_display,
-                sdmmc_attached_flag: false,
+                state: AppState::NotReady,
+                card: embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin).into(),
             },
             Local {
                 timer,
                 trigger,
-                // sm2m_input_bus,
-                // sm2m_output_bus,
-                // sdmmc_detect_pin,
-                // sdmmc_absent_led,
+                sdmmc_detect_pin,
+                sdmmc_detached_led,
             },
             init::Monotonics(),
         )
@@ -174,9 +167,9 @@ mod app {
     }
 
     extern "Rust" {
-        #[task(binds = TIM1_UP, local = [timer, /*sdmmc_detect_pin, sdmmc_absent_led*/], shared = [card, sdmmc_attached_flag])]
+        #[task(binds = TIM1_UP, local = [timer, sdmmc_detect_pin, sdmmc_detached_led], shared = [state])]
         fn sdmmc_detect(_: sdmmc_detect::Context);
-        #[task(binds = EXTI0, local = [trigger])]
+        #[task(binds = EXTI0, local = [trigger], shared = [card])]
         fn trigger(_: trigger::Context);
     }
 }
