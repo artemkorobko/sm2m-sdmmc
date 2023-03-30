@@ -113,19 +113,13 @@ mod app {
         gpioa.pa9.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_Control_1
         gpioc.pc11.into_pull_down_input(&mut gpioc.crh); // Data_Transfer_Completed_Output
 
+        // Configure LED indicators
         let sdmmc_detached_led = gpioa
             .pa0
             .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::Low);
 
-        let mut sdmmc_detect_pin = gpioa.pa3.into_pull_up_input(&mut gpioa.crl);
-        sdmmc_detect_pin.make_interrupt_source(&mut afio);
-        sdmmc_detect_pin.enable_interrupt(&mut cx.device.EXTI);
-        sdmmc_detect_pin.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::RisingFalling);
-
-        let mut timer = cx.device.TIM1.counter_ms(&clocks);
-        timer.start(1.secs()).unwrap();
-        timer.listen(timer::Event::Update);
-
+        // Configure SDMMC
+        let sdmmc_detect_pin = gpioa.pa3.into_pull_up_input(&mut gpioa.crl);
         let sdmmc_cs_pin = gpioa.pa4.into_push_pull_output(&mut gpioa.crl);
         let sdmmc_mosi_pin = gpioa.pa7.into_alternate_push_pull(&mut gpioa.crl);
         let sdmmc_sck_pin = gpioa.pa5.into_alternate_push_pull(&mut gpioa.crl);
@@ -141,6 +135,11 @@ mod app {
             100.kHz(),
             clocks,
         );
+
+        // Start SDMMC detection timer
+        let mut timer = cx.device.TIM1.counter_ms(&clocks);
+        timer.start(1.secs()).unwrap();
+        timer.listen(timer::Event::Update);
 
         (
             Shared {
