@@ -94,7 +94,7 @@ impl Bus {
             w.bits(bits)
         });
 
-        self.device.GPIOB.odr.modify(|r, w| {
+        self.device.GPIOC.odr.modify(|r, w| {
             let mut bits = r.bits();
             bits = write_bit(bits, 10, data, 0); // pc10 - Data_Bus_Output_00
             bits = write_bit(bits, 9, data, 4); // pc9 - Data_Bus_Output_04
@@ -106,7 +106,7 @@ impl Bus {
             w.bits(bits)
         });
 
-        self.device.GPIOB.odr.modify(|r, w| {
+        self.device.GPIOD.odr.modify(|r, w| {
             let mut bits = r.bits();
             bits = write_bit(bits, 15, data, 7); // pd15 - Data_Bus_Output_07
             bits = write_bit(bits, 14, data, 8); // pd14 - Data_Bus_Output_08
@@ -119,7 +119,7 @@ impl Bus {
             w.bits(bits)
         });
 
-        self.device.GPIOB.odr.modify(|r, w| {
+        self.device.GPIOE.odr.modify(|r, w| {
             let mut bits = r.bits();
             bits = write_flag(bits, 6, state.set); // pe6 - External_Set_Output
             w.bits(bits)
@@ -168,7 +168,6 @@ impl Bus {
         let dtl = bit_is_set(pb, 13); // pb13 - Data_Transfer_Long_Input
         let dts = bit_is_set(pb, 11); // pb11 - Data_Transfer_Short_Input
 
-        // All bits are flipped to convert from SM2M opposite logic level
         InputState {
             data,
             reset,
