@@ -7,14 +7,13 @@ use panic_semihosting as _;
 #[cfg(not(debug_assertions))]
 use panic_halt as _;
 
+mod buffer;
 mod peripherals;
 mod tasks;
-mod types;
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER])]
 mod app {
-    use crate::types::sdmmc;
-
+    use crate::peripherals::*;
     use crate::tasks::*;
 
     use stm32f1xx_hal::{
@@ -26,7 +25,7 @@ mod app {
 
     #[shared]
     struct Shared {
-        sdmmc_spi: sdmmc::Bus,
+        card: sdmmc::Card,
         sdmmc_attached_flag: bool,
         // status_display: status::Display,
     }
@@ -37,8 +36,8 @@ mod app {
         trigger: gpio::PB13<gpio::Input<gpio::PullDown>>,
         // sm2m_input_bus: sm2m::InputBus,
         // sm2m_output_bus: sm2m::OutputBus,
-        sdmmc_detect_pin: sdmmc::DetectPin,
-        sdmmc_absent_led: sdmmc::DetectLed,
+        // sdmmc_detect_pin: sdmmc::DetectPin,
+        // sdmmc_absent_led: sdmmc::DetectLed,
     }
 
     #[init]
@@ -117,11 +116,11 @@ mod app {
         gpioa.pa9.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_Control_1
         gpioc.pc11.into_pull_down_input(&mut gpioc.crh); // Data_Transfer_Completed_Output
 
-        let sdmmc_absent_led = sdmmc::DetectLed::new(
-            gpioa
-                .pa0
-                .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::Low),
-        );
+        // let sdmmc_absent_led = sdmmc::DetectLed::new(
+        //     gpioa
+        //         .pa0
+        //         .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::Low),
+        // );
 
         let mut sdmmc_detect_pin = gpioa.pa3.into_pull_up_input(&mut gpioa.crl);
         sdmmc_detect_pin.make_interrupt_source(&mut afio);
@@ -151,7 +150,7 @@ mod app {
 
         (
             Shared {
-                sdmmc_spi,
+                card: sdmmc_spi.into(),
                 // status_display,
                 sdmmc_attached_flag: false,
             },
@@ -160,8 +159,8 @@ mod app {
                 trigger,
                 // sm2m_input_bus,
                 // sm2m_output_bus,
-                sdmmc_detect_pin,
-                sdmmc_absent_led,
+                // sdmmc_detect_pin,
+                // sdmmc_absent_led,
             },
             init::Monotonics(),
         )
@@ -175,7 +174,7 @@ mod app {
     }
 
     extern "Rust" {
-        #[task(binds = TIM1_UP, local = [timer, sdmmc_detect_pin, sdmmc_absent_led], shared = [sdmmc_spi, sdmmc_attached_flag])]
+        #[task(binds = TIM1_UP, local = [timer, /*sdmmc_detect_pin, sdmmc_absent_led*/], shared = [card, sdmmc_attached_flag])]
         fn sdmmc_detect(_: sdmmc_detect::Context);
         #[task(binds = EXTI0, local = [trigger])]
         fn trigger(_: trigger::Context);

@@ -3,31 +3,31 @@ use stm32f1xx_hal::timer::Event;
 
 use crate::{
     app,
-    peripherals::sdmmc::{AsFileName, StaticTimeSource},
-    types::sdmmc,
+    buffer::Buffer,
+    peripherals::sdmmc::{AsFileName, Card, StaticTimeSource},
 };
 
 pub fn sdmmc_detect(cx: app::sdmmc_detect::Context) {
     let timer = cx.local.timer;
-    let sdmmc_absent_led = cx.local.sdmmc_absent_led;
-    let sdmmc_detect_pin = cx.local.sdmmc_detect_pin;
+    // let sdmmc_absent_led = cx.local.sdmmc_absent_led;
+    // let sdmmc_detect_pin = cx.local.sdmmc_detect_pin;
     let mut sdmmc_attached_flag = cx.shared.sdmmc_attached_flag;
-    let is_sdmmc_attached = sdmmc_detect_pin.is_high();
+    // let is_sdmmc_attached = sdmmc_detect_pin.is_high();
 
-    sdmmc_attached_flag.lock(|sdmmc_attached_flag| {
-        *sdmmc_attached_flag = is_sdmmc_attached;
-    });
+    // sdmmc_attached_flag.lock(|sdmmc_attached_flag| {
+    //     *sdmmc_attached_flag = is_sdmmc_attached;
+    // });
 
-    if is_sdmmc_attached {
-        sdmmc_absent_led.off();
-    } else {
-        sdmmc_absent_led.on();
-    }
+    // if is_sdmmc_attached {
+    //     sdmmc_absent_led.off();
+    // } else {
+    //     sdmmc_absent_led.on();
+    // }
 
     timer.clear_interrupt(Event::Update);
 }
 
-fn write(bus: &mut sdmmc::Bus, file: u16, buffer: sdmmc::Buffer) {
+fn write(bus: &mut Card, file: u16, buffer: Buffer) {
     // read from SDMMC to BUS
     // let chunk_size = 2;
     // for chunk in buffer.chunks(chunk_size) {
