@@ -8,3 +8,5 @@ fp-info-cache
 sym-lib-table
 .DS_Store
 *.bak
+*.bkp
+*.dtmp

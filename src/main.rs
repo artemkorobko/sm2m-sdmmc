@@ -73,57 +73,57 @@ mod app {
         let (pa15, _pb3, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
 
         // Configure input bus pins
-        pb4.into_pull_down_input(&mut gpiob.crl); // Data_Bus_Input_08
-        gpiob.pb6.into_pull_down_input(&mut gpiob.crl); // Data_Transfer_Short_Input
-        gpiob.pb7.into_pull_down_input(&mut gpiob.crl); // Data_Bus_Input_00
-        gpiob.pb8.into_pull_down_input(&mut gpiob.crh); // Data_Bus_Input_Control_1
-        gpiob.pb9.into_pull_down_input(&mut gpiob.crh); // Reset_Input
-        let mut trigger = gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // Data_Transfer_Long_Input
+        pb4.into_pull_down_input(&mut gpiob.crl); // DI_8
+        gpiob.pb6.into_pull_down_input(&mut gpiob.crl); // DTSI
+        gpiob.pb7.into_pull_down_input(&mut gpiob.crl); // DI_0
+        gpiob.pb8.into_pull_down_input(&mut gpiob.crh); // CTRLI_1
+        gpiob.pb9.into_pull_down_input(&mut gpiob.crh); // RST
+        let mut trigger = gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // DTLI
         trigger.make_interrupt_source(&mut afio);
         trigger.enable_interrupt(&mut cx.device.EXTI);
         trigger.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
-        gpiob.pb14.into_pull_down_input(&mut gpiob.crh); // Data_Transfer_Control_Completed_Input
-        gpiod.pd0.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_15
-        gpiod.pd1.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_13
-        gpiod.pd2.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_Control_0
-        gpiod.pd3.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_14
-        gpiod.pd4.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_12
-        gpiod.pd5.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_10
-        gpiod.pd6.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_09
-        gpiod.pd7.into_pull_down_input(&mut gpiod.crl); // Data_Bus_Input_11
-        gpioe.pe0.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_02
-        gpioe.pe1.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_01
-        gpioe.pe2.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_03
-        gpioe.pe3.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_04
-        gpioe.pe4.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_06
-        gpioe.pe5.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_05
-        gpioe.pe6.into_pull_down_input(&mut gpioe.crl); // Data_Bus_Input_07
-        
+        gpiob.pb14.into_pull_down_input(&mut gpiob.crh); // DTEI
+        gpiod.pd0.into_pull_down_input(&mut gpiod.crl); // DI_15
+        gpiod.pd1.into_pull_down_input(&mut gpiod.crl); // DI_13
+        gpiod.pd2.into_pull_down_input(&mut gpiod.crl); // CTRLI_0
+        gpiod.pd3.into_pull_down_input(&mut gpiod.crl); // DI_14
+        gpiod.pd4.into_pull_down_input(&mut gpiod.crl); // DI_12
+        gpiod.pd5.into_pull_down_input(&mut gpiod.crl); // DI_10
+        gpiod.pd6.into_pull_down_input(&mut gpiod.crl); // DI_9
+        gpiod.pd7.into_pull_down_input(&mut gpiod.crl); // DI_11
+        gpioe.pe0.into_pull_down_input(&mut gpioe.crl); // DI_2
+        gpioe.pe1.into_pull_down_input(&mut gpioe.crl); // DI_1
+        gpioe.pe2.into_pull_down_input(&mut gpioe.crl); // DI_3
+        gpioe.pe3.into_pull_down_input(&mut gpioe.crl); // DI_4
+        gpioe.pe4.into_pull_down_input(&mut gpioe.crl); // DI_6
+        gpioe.pe5.into_pull_down_input(&mut gpioe.crl); // DI_5
+        gpioe.pe6.into_pull_down_input(&mut gpioe.crl); // DI_7
+
         // Configure output bus pins
-        gpioa.pa8.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_03
-        gpioa.pa9.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_Control_1
-        gpioa.pa10.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_02
-        gpioa.pa11.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_Control_0
-        gpioa.pa12.into_pull_down_input(&mut gpioa.crh); // Data_Bus_Output_01
-        pa15.into_pull_down_input(&mut gpioa.crh); // External_Error_Output
-        gpiob.pb12.into_pull_down_input(&mut gpiob.crh); // External_Reset_Output
-        gpiob.pb15.into_pull_down_input(&mut gpiob.crh); // Data_Bus_Output_14
-        gpioc.pc3.into_pull_down_input(&mut gpioc.crl); // External_Set_Output
-        gpioc.pc6.into_pull_down_input(&mut gpioc.crl); // Data_Bus_Output_09
-        gpioc.pc7.into_pull_down_input(&mut gpioc.crl); // Data_Bus_Output_06
-        gpioc.pc8.into_pull_down_input(&mut gpioc.crh); // Data_Bus_Output_05
-        gpioc.pc9.into_pull_down_input(&mut gpioc.crh); // Data_Bus_Output_04
-        gpioc.pc10.into_pull_down_input(&mut gpioc.crh); // Data_Bus_Output_00
-        gpioc.pc11.into_pull_down_input(&mut gpioc.crh); // Data_Transfer_Completed_Output
-        gpioc.pc12.into_pull_down_input(&mut gpioc.crh); // Data_Bus_Output_Control_State
-        gpiod.pd8.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_11
-        gpiod.pd9.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_15
-        gpiod.pd10.into_pull_down_input(&mut gpiod.crh); // Ready_Output
-        gpiod.pd11.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_12
-        gpiod.pd12.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_13
-        gpiod.pd13.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_10
-        gpiod.pd14.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_08
-        gpiod.pd15.into_pull_down_input(&mut gpiod.crh); // Data_Bus_Output_07
+        gpioa.pa8.into_pull_down_input(&mut gpioa.crh); // DO_3
+        gpioa.pa9.into_pull_down_input(&mut gpioa.crh); // CTRLO_1
+        gpioa.pa10.into_pull_down_input(&mut gpioa.crh); // DO_2
+        gpioa.pa11.into_pull_down_input(&mut gpioa.crh); // CTRLO_0
+        gpioa.pa12.into_pull_down_input(&mut gpioa.crh); // DO_1
+        pa15.into_pull_down_input(&mut gpioa.crh); // ERR
+        gpiob.pb12.into_pull_down_input(&mut gpiob.crh); // RSTE
+        gpiob.pb15.into_pull_down_input(&mut gpiob.crh); // DO_14
+        gpioc.pc3.into_pull_down_input(&mut gpioc.crl); // SETE
+        gpioc.pc6.into_pull_down_input(&mut gpioc.crl); // DO_9
+        gpioc.pc7.into_pull_down_input(&mut gpioc.crl); // DO_6
+        gpioc.pc8.into_pull_down_input(&mut gpioc.crh); // DO_5
+        gpioc.pc9.into_pull_down_input(&mut gpioc.crh); // DO_4
+        gpioc.pc10.into_pull_down_input(&mut gpioc.crh); // DO_0
+        gpioc.pc11.into_pull_down_input(&mut gpioc.crh); // DTEO
+        gpioc.pc12.into_pull_down_input(&mut gpioc.crh); // CTRLD
+        gpiod.pd8.into_pull_down_input(&mut gpiod.crh); // DO_11
+        gpiod.pd9.into_pull_down_input(&mut gpiod.crh); // DO_15
+        gpiod.pd10.into_pull_down_input(&mut gpiod.crh); // RDY
+        gpiod.pd11.into_pull_down_input(&mut gpiod.crh); // DO_12
+        gpiod.pd12.into_pull_down_input(&mut gpiod.crh); // DO_13
+        gpiod.pd13.into_pull_down_input(&mut gpiod.crh); // DO_10
+        gpiod.pd14.into_pull_down_input(&mut gpiod.crh); // DO_8
+        gpiod.pd15.into_pull_down_input(&mut gpiod.crh); // DO_7
 
         // Configure LED indicators
         let sdmmc_detached_led = gpioa

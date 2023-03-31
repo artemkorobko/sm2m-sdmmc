@@ -1,4 +1,4 @@
-# SM2M SDMMC
+# SM2M SDMMC Adapter
 
 Hard drive replacement solution for SM2M computing units based on STM32F103VBT6 MCU.
 
@@ -13,6 +13,8 @@ Software implementation is based on [RTIC](https://rtic.rs/1/book/en/preface.htm
 - Status LED indicators.
 
 The file name on SD card is formatted based on a 16 bit starting address (sent from SM2M) with `.bin` extention and has the following format `<address>.bin`. As an example, the file can be named starting form `0.bin` up to `65535.bin`.
+
+[SM2M SDMMC Adapter Bus documentation](BUS.md)
 
 # Prerequisites
 ## Rust
