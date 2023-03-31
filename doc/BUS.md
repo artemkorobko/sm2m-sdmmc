@@ -2,7 +2,7 @@
 
 This document describes data bus lines and their characteristics.
 
-Adapter always receives commands from SM2M computing units and does not initiate communication in the first place. Each command received from SM2M should be confirmed with either success response or error.
+All input lines are 5v tolerant and capable of handling 5v levels. All output lines operate only on 3.3v level.
 
 # Input line
 

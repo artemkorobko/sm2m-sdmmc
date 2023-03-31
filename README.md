@@ -14,7 +14,8 @@ Software implementation is based on [RTIC](https://rtic.rs/1/book/en/preface.htm
 
 The file name on SD card is formatted based on a 16 bit starting address (sent from SM2M) with `.bin` extention and has the following format `<address>.bin`. As an example, the file can be named starting form `0.bin` up to `65535.bin`.
 
-[SM2M SDMMC Adapter Bus documentation](BUS.md)
+[SM2M SDMMC Adapter Bus Documentation](doc/BUS.md)  
+[SM2M SDMMC Adapter Functional Design](doc/FUNC.md)
 
 # Prerequisites
 ## Rust
