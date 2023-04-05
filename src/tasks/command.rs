@@ -22,11 +22,9 @@ pub fn command(cx: app::command::Context) {
     let out_bus = cx.local.output_bus;
     let result = match mode {
         Mode::Ready => mode_ready::handle(input, error_led, sdmmc_detect),
-        Mode::Address(file_name) => {
-            mode_address::handle(input, write_led, read_led, card, file_name)
-        }
-        Mode::Write(file_name, buf) => mode_write::handle(input, out_bus),
-        Mode::Read(file_name, buf) => mode_read::handle(input, out_bus),
+        Mode::Address(file) => mode_address::handle(input, write_led, read_led, card, file),
+        Mode::Write(file, buf) => mode_write::handle(input, buf, card, out_bus),
+        Mode::Read(file, buf) => mode_read::handle(input, buf, card, out_bus),
         Mode::Error(err) => mode_error(err, out_bus),
     };
 

@@ -1,4 +1,4 @@
-use alloc::format;
+use alloc::{format, vec::Vec};
 use embedded_hal::digital::v2::OutputPin;
 
 use crate::{
@@ -6,12 +6,14 @@ use crate::{
     peripherals::{sdmmc, sm2m},
 };
 
+const IO_BUFFER_CAPACITY: usize = 1024;
+
 pub fn handle<WL, RL>(
     input: sm2m::Input,
     write_led: &mut WL,
     read_led: &mut RL,
     card: &mut sdmmc::Card,
-    file_name: &sdmmc::FileName,
+    file_name: &str,
 ) -> Result<Option<Mode>, AppError>
 where
     WL: OutputPin,
@@ -46,7 +48,10 @@ where
         )?;
     }
     led.set_low().ok();
-    Ok(None)
+    Ok(Some(Mode::Write(
+        file_name.into(),
+        Vec::with_capacity(IO_BUFFER_CAPACITY),
+    )))
 }
 
 // fn delete_file<'a>(
@@ -86,7 +91,7 @@ fn copy_file(
 fn read_command<L>(
     led: &mut L,
     card: &mut sdmmc::Card,
-    file_name: &sdmmc::FileName,
+    file_name: &str,
 ) -> Result<Option<Mode>, AppError>
 where
     L: OutputPin,
@@ -96,7 +101,10 @@ where
     if is_file_exists(&mut controller, &volume, &dir, file_name)? {
         let file_name = file_name.clone();
         led.set_low().ok();
-        Ok(Some(Mode::Read(file_name, heapless::Vec::new())))
+        Ok(Some(Mode::Read(
+            file_name.into(),
+            Vec::with_capacity(IO_BUFFER_CAPACITY),
+        )))
     } else {
         let err = embedded_sdmmc::Error::FileNotFound;
         Err(AppError::SdMmcController(err))

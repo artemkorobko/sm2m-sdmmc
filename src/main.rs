@@ -9,7 +9,6 @@ use panic_semihosting as _;
 #[cfg(not(debug_assertions))]
 use panic_halt as _;
 
-mod buffer;
 mod mode;
 mod peripherals;
 mod tasks;
@@ -48,7 +47,7 @@ mod app {
     fn init(mut cx: init::Context) -> (Shared, Local, init::Monotonics) {
         {
             use core::mem::MaybeUninit;
-            const HEAP_SIZE: usize = 1024;
+            const HEAP_SIZE: usize = 1024 * 10;
             static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
             unsafe { super::HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
         }

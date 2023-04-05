@@ -9,7 +9,6 @@ cortex-m-semihosting = "0.5"
 embedded-alloc = "0.5"
 embedded-hal = "0.2"
 embedded-sdmmc = "0.4"
-heapless = "0.7"
 panic-halt = "0.2"
 panic-semihosting = "0.6"
 
@@ -33,6 +32,6 @@ opt-level = 1
 debug = true
 # Add the following config to .cargo/config.toml if opt-level = "s" is enabled
 # rustflags = ["-C", "inline-threshold=275"]
-#opt-level = "s" # optimize for size, default is 3 which is optimization for speed
+# opt-level = "s" # optimize for size, default is 3 which is optimization for speed
 codegen-units = 1
 lto = true

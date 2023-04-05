@@ -1,6 +1,5 @@
+use alloc::{string::String, vec::Vec};
 use embedded_sdmmc::sdmmc;
-
-use crate::peripherals::sdmmc::FileName;
 
 #[derive(Clone)]
 pub enum AppError {
@@ -127,8 +126,8 @@ impl From<embedded_sdmmc::Error<embedded_sdmmc::sdmmc::Error>> for AppError {
 
 pub enum Mode {
     Ready,
-    Address(FileName),
-    Write(FileName, heapless::Vec<u16, 5120>),
-    Read(FileName, heapless::Vec<u16, 5120>),
+    Address(String),
+    Write(String, Vec<u8>),
+    Read(String, Vec<u8>),
     Error(AppError),
 }

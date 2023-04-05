@@ -424,7 +424,6 @@ dependencies = [
  "embedded-alloc",
  "embedded-hal",
  "embedded-sdmmc",
- "heapless",
  "panic-halt",
  "panic-semihosting",
  "stm32f1xx-hal",
