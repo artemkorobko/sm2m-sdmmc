@@ -6,7 +6,7 @@ use crate::{
     peripherals::{sdmmc, sm2m},
 };
 
-const IO_BUFFER_CAPACITY: usize = 1024;
+const IO_BUFFER_CAPACITY: usize = 1024 * 10;
 
 pub fn handle<WL, RL>(
     input: sm2m::Input,
@@ -104,6 +104,7 @@ where
         Ok(Some(Mode::Read(
             file_name.into(),
             Vec::with_capacity(IO_BUFFER_CAPACITY),
+            0,
         )))
     } else {
         let err = embedded_sdmmc::Error::FileNotFound;

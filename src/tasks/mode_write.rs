@@ -7,6 +7,7 @@ use crate::{
 
 pub fn handle<W>(
     input: sm2m::Input,
+    file_name: &str,
     buf: &mut Vec<u8>,
     card: &mut sdmmc::Card,
     output_bus: &mut W,

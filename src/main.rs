@@ -47,7 +47,7 @@ mod app {
     fn init(mut cx: init::Context) -> (Shared, Local, init::Monotonics) {
         {
             use core::mem::MaybeUninit;
-            const HEAP_SIZE: usize = 1024 * 10;
+            const HEAP_SIZE: usize = 1024 * 15;
             static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
             unsafe { super::HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
         }
@@ -127,7 +127,7 @@ mod app {
         // Configure LED indicators
         let error_led = gpioa
             .pa0
-            .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::Low);
+            .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High);
         let write_led = gpioa
             .pa1
             .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High);
