@@ -2,7 +2,7 @@
 target = "thumbv7m-none-eabi"
 
 [target.thumbv7m-none-eabi]
-rustflags = ["-C", "link-arg=-Tlink.x"]
+rustflags = ["-C", "link-arg=-Tlink.x", "-C", "inline-threshold=275"]
 runner = "arm-none-eabi-gdb -q -x openocd.gdb"
 
 [registries.crates-io]
