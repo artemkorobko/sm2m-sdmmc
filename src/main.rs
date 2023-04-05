@@ -1,5 +1,5 @@
-#![no_main]
 #![no_std]
+#![no_main]
 
 #[cfg(debug_assertions)]
 use panic_semihosting as _;
@@ -8,8 +8,8 @@ use panic_semihosting as _;
 use panic_halt as _;
 
 mod buffer;
+mod mode;
 mod peripherals;
-mod state;
 mod tasks;
 
 #[global_allocator]
@@ -17,31 +17,29 @@ static HEAP: embedded_alloc::Heap = embedded_alloc::Heap::empty();
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER, PVD, CAN_RX1, CAN_SCE])]
 mod app {
+    use crate::mode::Mode;
     use crate::peripherals::*;
-    use crate::state::AppState;
-    use crate::tasks::*;
 
     use stm32f1xx_hal::{
         gpio::{self, ExtiPin},
-        pac,
         prelude::*,
-        spi, timer,
+        spi,
     };
 
     #[shared]
-    struct Shared {
-        state: AppState,
-        card: sdmmc::Card,
-    }
+    struct Shared {}
 
     #[local]
     struct Local {
-        timer: timer::CounterMs<pac::TIM1>,
+        state: Mode,
+        card: sdmmc::Card,
+        input_bus: sm2m::InvertedInputBus,
+        output_bus: sm2m::InvertedOutputBus,
         trigger: gpio::PB13<gpio::Input<gpio::PullDown>>,
         sdmmc_detect_pin: gpio::PA3<gpio::Input<gpio::PullUp>>,
-        sdmmc_detached_led: gpio::PA0<gpio::Output>,
-        sdmmc_write_led: gpio::PA1<gpio::Output>,
-        sdmmc_read_led: gpio::PA2<gpio::Output>,
+        error_led: gpio::PA0<gpio::Output>,
+        write_led: gpio::PA1<gpio::Output>,
+        read_led: gpio::PA2<gpio::Output>,
     }
 
     #[init]
@@ -126,13 +124,13 @@ mod app {
         gpiod.pd15.into_pull_down_input(&mut gpiod.crh); // DO_7
 
         // Configure LED indicators
-        let sdmmc_detached_led = gpioa
+        let error_led = gpioa
             .pa0
             .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::Low);
-        let sdmmc_write_led = gpioa
+        let write_led = gpioa
             .pa1
             .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High);
-        let sdmmc_read_led = gpioa
+        let read_led = gpioa
             .pa2
             .into_push_pull_output_with_state(&mut gpioa.crl, gpio::PinState::High);
 
@@ -154,23 +152,23 @@ mod app {
             clocks,
         );
 
-        // Start SDMMC detection timer
-        let mut timer = cx.device.TIM1.counter_ms(&clocks);
-        timer.start(1.secs()).unwrap();
-        timer.listen(timer::Event::Update);
+        // Steal buses
+        // Unsafe: all use pins are set to appropriats states before.
+        let input_bus = sm2m::InvertedInputBus::from(unsafe { sm2m::InputBus::steal() });
+        let output_bus = sm2m::InvertedOutputBus::from(unsafe { sm2m::OutputBus::steal() });
 
         (
-            Shared {
-                state: AppState::NotReady,
-                card: embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin).into(),
-            },
+            Shared {},
             Local {
-                timer,
+                state: Mode::Ready,
+                card: embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin).into(),
+                input_bus,
+                output_bus,
                 trigger,
                 sdmmc_detect_pin,
-                sdmmc_detached_led,
-                sdmmc_write_led,
-                sdmmc_read_led,
+                error_led,
+                write_led,
+                read_led,
             },
             init::Monotonics(),
         )
@@ -183,10 +181,20 @@ mod app {
         }
     }
 
+    use crate::tasks::*;
+
     extern "Rust" {
-        #[task(binds = TIM1_UP, local = [timer, sdmmc_detect_pin, sdmmc_detached_led], shared = [state])]
-        fn sdmmc_detect(_: sdmmc_detect::Context);
-        #[task(binds = EXTI0, local = [trigger], shared = [card])]
-        fn trigger(_: trigger::Context);
+        #[task(binds = EXTI0, local = [
+            trigger,
+            state,
+            error_led,
+            write_led,
+            read_led,
+            sdmmc_detect_pin,
+            card,
+            input_bus,
+            output_bus
+        ])]
+        fn command(_: command::Context);
     }
 }

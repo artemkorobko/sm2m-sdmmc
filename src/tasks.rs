@@ -1,5 +1,8 @@
-pub mod sdmmc_detect;
-pub mod trigger;
+mod mode_address;
+mod mode_read;
+mod mode_ready;
+mod mode_write;
 
-pub use sdmmc_detect::sdmmc_detect;
-pub use trigger::trigger;
+pub mod command;
+
+pub use command::command;
