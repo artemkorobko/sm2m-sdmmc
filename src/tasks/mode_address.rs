@@ -1,3 +1,4 @@
+use alloc::format;
 use embedded_hal::digital::v2::OutputPin;
 
 use crate::{
@@ -27,41 +28,59 @@ where
 fn write_command<L>(
     led: &mut L,
     card: &mut sdmmc::Card,
-    file_name: &sdmmc::FileName,
+    file_name: &str,
 ) -> Result<Option<Mode>, AppError>
 where
     L: OutputPin,
 {
-    // delette .bak file if exists
-    let (mut controller, volume) = super::command::open_sdmmc(card)?;
+    let (mut controller, mut volume) = super::command::open_sdmmc(card)?;
     let dir = controller.open_root_dir(&volume)?;
-    delete_file(&mut controller, &volume, &dir, &file_name)?;
-    // copy original file to .bak
-    // delete original file
+    let bakup_file_file = format!("{}.bak", file_name);
+    if is_file_exists(&mut controller, &volume, &dir, file_name)? {
+        copy_file(
+            &mut controller,
+            &mut volume,
+            &dir,
+            &file_name,
+            &bakup_file_file,
+        )?;
+    }
     led.set_low().ok();
     Ok(None)
 }
 
-fn delete_file<'a>(
-    controller: &mut sdmmc::card::Controller<'a>,
-    volume: &embedded_sdmmc::Volume,
-    dir: &embedded_sdmmc::Directory,
-    file_name: &str,
-) -> Result<bool, AppError> {
-    match controller.delete_file_in_dir(volume, dir, file_name) {
-        Ok(_) => Ok(true),
-        Err(embedded_sdmmc::Error::FileNotFound) => Ok(false),
-        Err(err) => Err(err.into()),
-    }
-}
+// fn delete_file<'a>(
+//     controller: &mut sdmmc::card::Controller<'a>,
+//     volume: &embedded_sdmmc::Volume,
+//     dir: &embedded_sdmmc::Directory,
+//     file_name: &str,
+// ) -> Result<bool, AppError> {
+//     match controller.delete_file_in_dir(volume, dir, file_name) {
+//         Ok(_) => Ok(true),
+//         Err(embedded_sdmmc::Error::FileNotFound) => Ok(false),
+//         Err(err) => Err(err.into()),
+//     }
+// }
 
 fn copy_file(
     controller: &mut sdmmc::card::Controller,
-    volume: &embedded_sdmmc::Volume,
+    volume: &mut embedded_sdmmc::Volume,
     dir: &embedded_sdmmc::Directory,
-    from_file_name: &str,
-    to_file_name: &str,
-) {
+    src_file_name: &str,
+    dst_file_name: &str,
+) -> Result<bool, AppError> {
+    let mode = embedded_sdmmc::Mode::ReadOnly;
+    let mut src = controller.open_file_in_dir(volume, dir, src_file_name, mode)?;
+    let mode = embedded_sdmmc::Mode::ReadWriteCreateOrTruncate;
+    let mut dst = controller.open_file_in_dir(volume, dir, dst_file_name, mode)?;
+    let mut buf = [0; 64];
+    loop {
+        match controller.read(volume, &mut src, &mut buf) {
+            Ok(size) => controller.write(volume, &mut dst, &buf[..size])?,
+            Err(embedded_sdmmc::Error::EndOfFile) => return Ok(true),
+            Err(err) => return Err(err.into()),
+        };
+    }
 }
 
 fn read_command<L>(

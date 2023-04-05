@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
+
 #[cfg(debug_assertions)]
 use panic_semihosting as _;
 
