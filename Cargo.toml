@@ -19,7 +19,7 @@ features = ["critical-section-single-core"]
 
 [dependencies.stm32f1xx-hal]
 version = "0.10"
-features = ["rt", "stm32f107"]
+features = ["rt", "stm32f103", "medium"]
 
 [[bin]]
 name = "sm2m-sdmmc"
@@ -30,6 +30,9 @@ bench = false
 opt-level = 1
 
 [profile.release]
-opt-level = 3
+debug = true
+# Add the following config to .cargo/config.toml if opt-level = "s" is enabled
+# rustflags = ["-C", "inline-threshold=275"]
+#opt-level = "s" # optimize for size, default is 3 which is optimization for speed
 codegen-units = 1
 lto = true

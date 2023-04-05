@@ -1,3 +1,4 @@
+/* Linker script for the STM32F103VBT6 */
 MEMORY
 {
   /* NOTE K = KiBi = 1024 bytes */
