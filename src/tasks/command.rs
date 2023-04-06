@@ -11,6 +11,12 @@ use crate::{
 
 use super::{mode_address, mode_read, mode_ready, mode_write};
 
+pub enum Complete {
+    Continue,
+    Mode(Mode),
+    Reply(u16),
+}
+
 pub fn command(cx: app::command::Context) {
     let mode = cx.local.state;
     let error_led = cx.local.error_led;
@@ -29,11 +35,12 @@ pub fn command(cx: app::command::Context) {
     };
 
     match result {
-        Ok(Some(new_state)) => {
-            *mode = new_state;
+        Ok(Complete::Mode(new)) => {
+            *mode = new;
             unsafe { out_bus.write(&sm2m::Output::ok()) };
         }
-        Ok(None) => unsafe { out_bus.write(&sm2m::Output::ok()) },
+        Ok(Complete::Continue) => unsafe { out_bus.write(&sm2m::Output::ok()) },
+        Ok(Complete::Reply(data)) => unsafe { out_bus.write(&sm2m::Output::data(data)) },
         Err(err) => {
             error_led.set_low();
             unsafe { out_bus.write(&sm2m::Output::error()) };
@@ -44,13 +51,13 @@ pub fn command(cx: app::command::Context) {
     cx.local.trigger.clear_interrupt_pending_bit();
 }
 
-fn mode_error<W: sm2m::Write>(err: &AppError, out_bus: &mut W) -> Result<Option<Mode>, AppError> {
+fn mode_error<W: sm2m::Write>(err: &AppError, out_bus: &mut W) -> Result<Complete, AppError> {
     unsafe { out_bus.write(&sm2m::Output::data(err.opcode())) }
-    Ok(Some(Mode::Ready))
+    Ok(Complete::Mode(Mode::Ready))
 }
 
-pub fn cmd_unhandled() -> Result<Option<Mode>, AppError> {
-    Ok(Some(Mode::Error(AppError::UnhandledCommand)))
+pub fn cmd_unhandled() -> Result<Complete, AppError> {
+    Ok(Complete::Mode(Mode::Error(AppError::UnhandledCommand)))
 }
 
 // try to implement the same method on Card

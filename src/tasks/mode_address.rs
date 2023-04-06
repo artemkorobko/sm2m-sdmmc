@@ -6,6 +6,8 @@ use crate::{
     peripherals::{sdmmc, sm2m},
 };
 
+use super::command::Complete;
+
 const IO_BUFFER_CAPACITY: usize = 1024 * 10;
 
 pub fn handle<WL, RL>(
@@ -14,7 +16,7 @@ pub fn handle<WL, RL>(
     read_led: &mut RL,
     card: &mut sdmmc::Card,
     file_name: &str,
-) -> Result<Option<Mode>, AppError>
+) -> Result<Complete, AppError>
 where
     WL: OutputPin,
     RL: OutputPin,
@@ -31,13 +33,14 @@ fn write_command<L>(
     led: &mut L,
     card: &mut sdmmc::Card,
     file_name: &str,
-) -> Result<Option<Mode>, AppError>
+) -> Result<Complete, AppError>
 where
     L: OutputPin,
 {
     let (mut controller, mut volume) = super::command::open_sdmmc(card)?;
     let dir = controller.open_root_dir(&volume)?;
     let bakup_file_file = format!("{}.bak", file_name);
+
     if is_file_exists(&mut controller, &volume, &dir, file_name)? {
         copy_file(
             &mut controller,
@@ -49,8 +52,9 @@ where
         delete_file(&mut controller, &volume, &dir, file_name)?;
         controller.close_dir(&volume, dir);
     }
+
     led.set_low().ok();
-    Ok(Some(Mode::Write(
+    Ok(Complete::Mode(Mode::Write(
         file_name.into(),
         Vec::with_capacity(IO_BUFFER_CAPACITY),
     )))
@@ -94,7 +98,7 @@ fn read_command<L>(
     led: &mut L,
     card: &mut sdmmc::Card,
     file_name: &str,
-) -> Result<Option<Mode>, AppError>
+) -> Result<Complete, AppError>
 where
     L: OutputPin,
 {
@@ -104,7 +108,7 @@ where
         let file_name = file_name.clone();
         led.set_low().ok();
         controller.close_dir(&volume, dir);
-        Ok(Some(Mode::Read(
+        Ok(Complete::Mode(Mode::Read(
             file_name.into(),
             Vec::with_capacity(IO_BUFFER_CAPACITY),
             0,

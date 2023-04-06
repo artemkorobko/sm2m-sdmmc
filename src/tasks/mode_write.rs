@@ -5,14 +5,16 @@ use crate::{
     peripherals::{sdmmc, sm2m},
 };
 
+use super::command::Complete;
+
 pub fn handle(
     input: sm2m::Input,
     file_name: &str,
     buf: &mut Vec<u8>,
     card: &mut sdmmc::Card,
-) -> Result<Option<Mode>, AppError> {
+) -> Result<Complete, AppError> {
     if input.dtei {
-        Ok(Some(Mode::Ready))
+        Ok(Complete::Mode(Mode::Ready))
     } else {
         buf.extend_from_slice(&input.data.to_be_bytes());
 
@@ -25,7 +27,7 @@ pub fn handle(
             controller.close_dir(&volume, dir);
         }
 
-        Ok(None)
+        Ok(Complete::Continue)
     }
 }
 
