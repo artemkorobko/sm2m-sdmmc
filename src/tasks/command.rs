@@ -23,7 +23,7 @@ pub fn command(cx: app::command::Context) {
     let result = match mode {
         Mode::Ready => mode_ready::handle(input, error_led, sdmmc_detect),
         Mode::Address(file) => mode_address::handle(input, write_led, read_led, card, file),
-        Mode::Write(file, buf) => mode_write::handle(input, file, buf, card, out_bus),
+        Mode::Write(file, buf) => mode_write::handle(input, file, buf, card),
         Mode::Read(file, buf, pos) => mode_read::handle(input, file, buf, *pos, card, out_bus),
         Mode::Error(err) => mode_error(err, out_bus),
     };
@@ -53,6 +53,7 @@ pub fn cmd_unhandled() -> Result<Option<Mode>, AppError> {
     Ok(Some(Mode::Error(AppError::UnhandledCommand)))
 }
 
+// try to implement the same method on Card
 pub fn open_sdmmc<'a>(
     card: &'a mut sdmmc::Card,
 ) -> Result<(sdmmc::card::Controller<'a>, embedded_sdmmc::Volume), AppError> {

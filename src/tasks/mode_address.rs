@@ -46,6 +46,8 @@ where
             &file_name,
             &bakup_file_file,
         )?;
+        delete_file(&mut controller, &volume, &dir, file_name)?;
+        controller.close_dir(&volume, dir);
     }
     led.set_low().ok();
     Ok(Some(Mode::Write(
@@ -54,18 +56,18 @@ where
     )))
 }
 
-// fn delete_file<'a>(
-//     controller: &mut sdmmc::card::Controller<'a>,
-//     volume: &embedded_sdmmc::Volume,
-//     dir: &embedded_sdmmc::Directory,
-//     file_name: &str,
-// ) -> Result<bool, AppError> {
-//     match controller.delete_file_in_dir(volume, dir, file_name) {
-//         Ok(_) => Ok(true),
-//         Err(embedded_sdmmc::Error::FileNotFound) => Ok(false),
-//         Err(err) => Err(err.into()),
-//     }
-// }
+fn delete_file<'a>(
+    controller: &mut sdmmc::card::Controller<'a>,
+    volume: &embedded_sdmmc::Volume,
+    dir: &embedded_sdmmc::Directory,
+    file_name: &str,
+) -> Result<bool, AppError> {
+    match controller.delete_file_in_dir(volume, dir, file_name) {
+        Ok(_) => Ok(true),
+        Err(embedded_sdmmc::Error::FileNotFound) => Ok(false),
+        Err(err) => Err(err.into()),
+    }
+}
 
 fn copy_file(
     controller: &mut sdmmc::card::Controller,
@@ -101,12 +103,14 @@ where
     if is_file_exists(&mut controller, &volume, &dir, file_name)? {
         let file_name = file_name.clone();
         led.set_low().ok();
+        controller.close_dir(&volume, dir);
         Ok(Some(Mode::Read(
             file_name.into(),
             Vec::with_capacity(IO_BUFFER_CAPACITY),
             0,
         )))
     } else {
+        controller.close_dir(&volume, dir);
         let err = embedded_sdmmc::Error::FileNotFound;
         Err(AppError::SdMmcController(err))
     }

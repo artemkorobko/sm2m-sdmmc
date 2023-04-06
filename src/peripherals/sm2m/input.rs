@@ -5,7 +5,7 @@ pub struct Input {
     pub rst: bool,
     pub ctrli_0: bool,
     pub ctrli_1: bool,
-    pub dte: bool,
+    pub dtei: bool,
 }
 
 pub enum Command {
@@ -104,17 +104,17 @@ impl Read for InputBus {
         | copy_bit(pe, 5, 5) // pe5 - DI_5
         | copy_bit(pe, 6, 7); // pe6 - DI_7
 
-        let reset = bit_is_set(pb, 9); // pb9 - RST
-        let ctrl0 = bit_is_set(pd, 2); // pd2 - CTRLI_0
-        let ctrl1 = bit_is_set(pb, 8); // pb8 - CTRLI_1
-        let dtc = bit_is_set(pb, 14); // pb14 - DTEI
+        let rst = bit_is_set(pb, 9); // pb9 - RST
+        let ctrli_0 = bit_is_set(pd, 2); // pd2 - CTRLI_0
+        let ctrli_1 = bit_is_set(pb, 8); // pb8 - CTRLI_1
+        let dtei = bit_is_set(pb, 14); // pb14 - DTEI
 
         Input {
             data,
-            rst: reset,
-            ctrli_0: ctrl0,
-            ctrli_1: ctrl1,
-            dte: dtc,
+            rst,
+            ctrli_0,
+            ctrli_1,
+            dtei,
         }
     }
 }
@@ -136,7 +136,7 @@ impl Read for InvertedInputBus {
             rst: !input.rst,
             ctrli_0: !input.ctrli_0,
             ctrli_1: !input.ctrli_1,
-            dte: !input.dte,
+            dtei: !input.dtei,
         }
     }
 }
