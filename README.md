@@ -12,7 +12,7 @@ Software implementation is based on [RTIC](https://rtic.rs/1/book/en/preface.htm
 - 10K internal buffer.
 - Status LED indicators.
 
-The file name on SD card is formatted based on a 16 bit starting address (sent from SM2M) with `.bin` extention and has the following format `<address>.bin`. As an example, the file can be named starting form `0.bin` up to `65535.bin`.
+The file name on SD card is generated after the 16 bit starting address (sent from SM2M) with `.bin` extention and has the following format `<address>.bin`. As an example, the file can be named starting form `0.bin` up to `65535.bin`.
 
 [SM2M SDMMC Adapter Bus Documentation](doc/BUS.md)  
 [SM2M SDMMC Adapter Functional Design](doc/FUNC.md)
@@ -20,13 +20,13 @@ The file name on SD card is formatted based on a 16 bit starting address (sent f
 # Prerequisites
 ## Rust
 - Install Rust toolchain by following the instructions on https://rustup.rs.
-- Install the `rust-std` component `thumbv7em-none-eabihf` to cross-compile for ARM Cortex-M4 MCU using the following command:
+- Install the `rust-std` component `thumbv7m-none-eabi` to cross-compile for ARM Cortex-M3 MCU using the following command:
 ```bash
-rustup target add thumbv7em-none-eabihf
+rustup target add thumbv7m-none-eabi
 ```
-- Install `cargo-binutils` subcommands to invoke the LLVM tools shipped with the Rust toolchain.
+- Install `cargo-binutils` subcommands to invoke the LLVM tools shipped with the Rust toolchain, `cargo-flash` to be able to flash target MCU, `cargo-embed` to vew logs and debug MCU in terminal and `probe-rs-debugger` to be able to debug MCU from VSCode.
 ```bash
-cargo install cargo-binutils 
+cargo install cargo-binutils cargo-flash cargo-embed probe-rs-debugger
 ```
 - Install `llvm-tools-preview` component for binary inspection.
 ```bash
@@ -35,16 +35,13 @@ rustup component add llvm-tools-preview
 
 ## ARM GCC extension for Mac
 Before installing extension make sure you have updated [Homebrew](https://brew.sh) packages.
-- Install ARM gcc extension and open on-chip debugger.
+- Install ARM gcc extension.
 ```bash
-brew install armmbed/formulae/arm-none-eabi-gcc openocd
+brew install armmbed/formulae/arm-none-eabi-gcc
 ```
 - Ensure extension has been installed
 ```bash
 arm-none-eabi-gcc -v
-```
-```bash
-openocd -v
 ```
 
 ## VS Build Tools for Windows
@@ -59,39 +56,41 @@ You can find more information about the embedded toolchains here https://docs.ru
 
 ## Visual Studio Code
 - Install Visual Studio Code from https://code.visualstudio.com.
-- Install the following extensions:  
-    - [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)  
-    - [Better TOML](https://marketplace.visualstudio.com/items?itemName=bungcip.better-toml)  
-    - [crates](https://marketplace.visualstudio.com/items?itemName=serayuzgur.crates)  
-    - [vscode-rustfmt](https://marketplace.visualstudio.com/items?itemName=statiolake.vscode-rustfmt)  
-    - [Cortex-Debug](https://marketplace.visualstudio.com/items?itemName=marus25.cortex-debug)  
+- Install the following extensions:
+    - [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+    - [Better TOML](https://marketplace.visualstudio.com/items?itemName=bungcip.better-toml)
+    - [crates](https://marketplace.visualstudio.com/items?itemName=serayuzgur.crates)
+    - [vscode-rustfmt](https://marketplace.visualstudio.com/items?itemName=statiolake.vscode-rustfmt)
+    - [Debugger for probe-rs](https://marketplace.visualstudio.com/items?itemName=probe-rs.probe-rs-debugger)
     - [Error Lens](https://marketplace.visualstudio.com/items?itemName=usernamehw.errorlens)
 
-# Build and upload debug version of firmware
+# Build and flash firmware
+Before flashing make sure probe has been attached to your computer and operates properly using command `cargo flash --list-probes`.
+
+## Build and flash debug version of firmware
 ```
-cargo build && \
-openocd -f ./openocd.cfg -c "init" -c "reset init" -c "flash write_image erase ./target/thumbv7m-none-eabi/debug/sm2m-sdmmc" -c "reset run" -c "exit"
+cargo flash --chip STM32F103VB
 ```
 
-# Run debug version of firmware
-1. Run `openocd -f ./openocd.cfg` in separate terminal to connect to the board.
-2. Run `cargo run` in separate terminal to connect GDB to the OpenOCD from step 1.
-3. Execute `c` command to continue execution.
-4. Observe debug logs in terminal from step 1.
-
-In order to subsequent firmware upload run `cargo build`.
-
-5. Press `Ctrl+C` in terminal from step 2.
-6. Execute `load` command to upload built firmware from step 5 to the board.
-7. Execute `c` command to continue execution.
-8. Observe debug logs in terminal from step 1.
-
-# Build and upload release version of firmware
+## Build and flash release version of firmware
 ```
-cargo build --release && \
-openocd -f ./openocd.cfg -c "init" -c "reset init" -c "flash write_image erase ./target/thumbv7m-none-eabi/release/sm2m-sdmmc" -c "reset run" -c "exit"
+cargo flash --release --chip STM32F103C8
+```
+
+# Run and monitor firmware
+
+## Run debug version of firmware
+```
+cargo embed
+```
+
+## Run release version of firmware
+```
+cargo embed --release
 ```
 
 # Links
 
-https://github.com/rust-embedded/cortex-m-quickstart
+[cortex-m-quickstart](https://github.com/rust-embedded/cortex-m-quickstart)  
+[rtic.rs](https://rtic.rs/1/book/en/)  
+[probe.rs](https://probe.rs)

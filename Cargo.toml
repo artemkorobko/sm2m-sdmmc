@@ -5,12 +5,10 @@ edition = "2021"
 
 [dependencies]
 cortex-m-rtic = "1.1"
-cortex-m-semihosting = "0.5"
 embedded-alloc = "0.5"
 embedded-hal = "0.2"
 embedded-sdmmc = "0.4"
-panic-halt = "0.2"
-panic-semihosting = "0.6"
+rtt-target = "0.4"
 
 [dependencies.cortex-m]
 version = "0.7"
@@ -25,8 +23,8 @@ name = "sm2m-sdmmc"
 test = false
 bench = false
 
-[profile.dev]
-opt-level = 1
+# [profile.dev]
+# opt-level = 1
 
 [profile.release]
 debug = true
