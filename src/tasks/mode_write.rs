@@ -1,45 +1,35 @@
 use alloc::vec::Vec;
+use embedded_hal::digital::v2::OutputPin;
 
 use crate::{
-    mode::{AppError, Mode},
+    error::AppError,
+    mode::Mode,
     peripherals::{sdmmc, sm2m},
 };
 
 use super::command::Complete;
 
-pub fn handle(
+pub fn handle<L>(
     input: sm2m::Input,
-    file_name: &str,
+    file: &str,
     buf: &mut Vec<u8>,
+    led: &mut L,
     card: &mut sdmmc::Card,
-) -> Result<Complete, AppError> {
+) -> Result<Complete, AppError>
+where
+    L: OutputPin,
+{
     if input.dtei {
+        led.set_high().ok(); // turn write LED off
         Ok(Complete::Mode(Mode::Ready))
     } else {
         buf.extend_from_slice(&input.data.to_be_bytes());
-
         if buf.len() == buf.capacity() {
-            let (mut controller, mut volume) = super::command::open_sdmmc(card)?;
-            let dir = controller.open_root_dir(&volume)?;
-            let mode = embedded_sdmmc::Mode::ReadWriteCreateOrAppend;
-            let mut file = controller.open_file_in_dir(&mut volume, &dir, file_name, mode)?;
-            write_entire_buf(&mut controller, &mut volume, &mut file, buf)?;
-            controller.close_dir(&volume, dir);
+            let mut ctl = card.open()?;
+            let mut file = ctl.oped_file_append(file)?;
+            ctl.write_all(&mut file, buf)?;
         }
 
         Ok(Complete::Continue)
     }
-}
-
-fn write_entire_buf(
-    controller: &mut sdmmc::card::Controller,
-    volume: &mut embedded_sdmmc::Volume,
-    file: &mut embedded_sdmmc::File,
-    buf: &[u8],
-) -> Result<usize, AppError> {
-    let mut written = 0;
-    while written < buf.len() {
-        written += controller.write(volume, file, &buf[written..])?;
-    }
-    Ok(written)
 }

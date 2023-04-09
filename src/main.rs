@@ -3,12 +3,7 @@
 
 extern crate alloc;
 
-#[cfg(debug_assertions)]
-use panic_semihosting as _;
-
-#[cfg(not(debug_assertions))]
-use panic_halt as _;
-
+mod error;
 mod mode;
 mod peripherals;
 mod tasks;
@@ -21,6 +16,8 @@ mod app {
     use crate::mode::Mode;
     use crate::peripherals::*;
 
+    use core::{panic::PanicInfo, sync::atomic};
+    use rtt_target::{rprintln, rtt_init_print};
     use stm32f1xx_hal::{
         gpio::{self, ExtiPin},
         prelude::*,
@@ -45,6 +42,8 @@ mod app {
 
     #[init]
     fn init(mut cx: init::Context) -> (Shared, Local, init::Monotonics) {
+        rtt_init_print!();
+
         {
             use core::mem::MaybeUninit;
             const HEAP_SIZE: usize = 1024 * 15;
@@ -179,6 +178,15 @@ mod app {
     fn idle(_: idle::Context) -> ! {
         loop {
             cortex_m::asm::wfi();
+        }
+    }
+
+    #[inline(never)]
+    #[panic_handler]
+    fn panic(info: &PanicInfo) -> ! {
+        rprintln!("{}", info);
+        loop {
+            atomic::compiler_fence(atomic::Ordering::SeqCst);
         }
     }
 

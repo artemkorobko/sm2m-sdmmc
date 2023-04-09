@@ -30,8 +30,8 @@ opt-level = 1
 
 [profile.release]
 debug = true
+codegen-units = 1
+lto = true
 # Add the following config to .cargo/config.toml if opt-level = "s" is enabled
 # rustflags = ["-C", "inline-threshold=275"]
 # opt-level = "s" # optimize for size, default is 3 which is optimization for speed
-codegen-units = 1
-lto = true

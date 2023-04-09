@@ -1,7 +1,7 @@
 use embedded_sdmmc::{TimeSource, Timestamp};
 
 #[derive(Default)]
-pub struct StaticTimeSource {}
+pub struct StaticTimeSource;
 
 impl TimeSource for StaticTimeSource {
     fn get_timestamp(&self) -> Timestamp {

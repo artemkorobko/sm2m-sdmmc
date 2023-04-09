@@ -1,5 +1,7 @@
 use stm32f1xx_hal::device::{Peripherals, GPIOB, GPIOD, GPIOE};
 
+use crate::error::AppError;
+
 pub struct Input {
     pub data: u16,
     pub rst: bool,
@@ -17,19 +19,19 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn from(value: Input) -> Option<Self> {
+    pub fn from(value: Input) -> Result<Self, AppError> {
         if value.data & 0x0F == 0x00 {
-            Some(Self::CheckStatus)
+            Ok(Self::CheckStatus)
         } else if value.data & 0x0F == 0x01 {
-            Some(Self::Write)
+            Ok(Self::Write)
         } else if value.data & 0x0F == 0x02 {
-            Some(Self::Read)
+            Ok(Self::Read)
         } else if value.data & 0x0F == 0x03 {
-            Some(Self::Address(0xFC00))
+            Ok(Self::Address(0xFC00))
         } else if value.rst {
-            Some(Self::Reset)
+            Ok(Self::Reset)
         } else {
-            None
+            Err(AppError::UnknownCommand)
         }
     }
 }

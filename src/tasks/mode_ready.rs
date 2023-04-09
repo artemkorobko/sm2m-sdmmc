@@ -1,31 +1,35 @@
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 
 use crate::{
-    mode::{AppError, Mode},
+    error::AppError,
+    mode::Mode,
     peripherals::{sdmmc, sm2m},
 };
 
 use super::command::Complete;
 
-pub fn handle<L, P>(
+pub fn handle<EL, WL, RL, D>(
     input: sm2m::Input,
-    err_led: &mut L,
-    sdmmc_detect: &P,
+    err_led: &mut EL,
+    write_led: &mut WL,
+    read_led: &mut RL,
+    sdmmc_detect: &D,
 ) -> Result<Complete, AppError>
 where
-    L: OutputPin,
-    P: InputPin,
+    EL: OutputPin,
+    WL: OutputPin,
+    RL: OutputPin,
+    D: InputPin,
 {
-    let command = sm2m::Command::from(input).ok_or(AppError::UnknownCommand)?;
-    match command {
-        sm2m::Command::CheckStatus => cmd_check_status(sdmmc_detect),
-        sm2m::Command::Reset => cmd_reset(err_led),
-        sm2m::Command::Address(addr) => cmd_address(addr),
-        _ => super::command::cmd_unhandled(),
+    match sm2m::Command::from(input)? {
+        sm2m::Command::CheckStatus => check_status(sdmmc_detect),
+        sm2m::Command::Reset => reset(err_led, write_led, read_led),
+        sm2m::Command::Address(addr) => address(addr),
+        _ => Err(AppError::UnhandledCommand),
     }
 }
 
-fn cmd_check_status<P>(sdmmc_detect: &P) -> Result<Complete, AppError>
+fn check_status<P>(sdmmc_detect: &P) -> Result<Complete, AppError>
 where
     P: InputPin,
 {
@@ -36,15 +40,23 @@ where
     }
 }
 
-fn cmd_reset<L>(err_led: &mut L) -> Result<Complete, AppError>
+fn reset<EL, WL, RL>(
+    err_led: &mut EL,
+    write_led: &mut WL,
+    read_led: &mut RL,
+) -> Result<Complete, AppError>
 where
-    L: OutputPin,
+    EL: OutputPin,
+    WL: OutputPin,
+    RL: OutputPin,
 {
-    err_led.set_high().ok();
+    err_led.set_high().ok(); // turn error LED off
+    write_led.set_high().ok(); // turn write LED off
+    read_led.set_high().ok(); // turn read LED off
     Ok(Complete::Continue)
 }
 
-fn cmd_address(addr: u16) -> Result<Complete, AppError> {
-    let file_name = sdmmc::AsFileName::as_file_name(&addr);
-    Ok(Complete::Mode(Mode::Address(file_name)))
+fn address(addr: u16) -> Result<Complete, AppError> {
+    let file = sdmmc::AsFileName::as_file_name(&addr);
+    Ok(Complete::Mode(Mode::Address(file)))
 }
