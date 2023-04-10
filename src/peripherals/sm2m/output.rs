@@ -15,22 +15,25 @@ pub struct Output {
 
 impl Output {
     pub fn ok() -> Self {
-        let mut output = Self::default();
-        output.rdy = true;
-        output
+        Output {
+            rdy: true,
+            ..Default::default()
+        }
     }
 
     pub fn error() -> Self {
-        let mut output = Self::default();
-        output.err = true;
-        output
+        Output {
+            err: true,
+            ..Default::default()
+        }
     }
 
     pub fn data(data: u16) -> Self {
-        let mut output = Self::default();
-        output.data = data;
-        output.rdy = true;
-        output
+        Output {
+            data,
+            rdy: true,
+            ..Default::default()
+        }
     }
 }
 

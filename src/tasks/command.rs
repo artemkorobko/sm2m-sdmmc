@@ -3,17 +3,9 @@ use stm32f1xx_hal::gpio::ExtiPin;
 use crate::{
     app,
     error::AppError,
-    mode::Mode,
+    mode::{address, read, ready, result::Complete, write, Mode},
     peripherals::sm2m::{self, Read, Write},
 };
-
-use super::{mode_address, mode_read, mode_ready, mode_write};
-
-pub enum Complete {
-    Continue,
-    Mode(Mode),
-    Reply(u16),
-}
 
 pub fn command(cx: app::command::Context) {
     let mode = cx.local.state;
@@ -25,10 +17,12 @@ pub fn command(cx: app::command::Context) {
     let input = unsafe { cx.local.input_bus.read() };
     let out_bus = cx.local.output_bus;
     let result = match mode {
-        Mode::Ready => mode_ready::handle(input, error_led, write_led, read_led, sdmmc_detect),
-        Mode::Address(file) => mode_address::handle(input, write_led, read_led, card, file),
-        Mode::Write(file, buf) => mode_write::handle(input, file, buf, write_led, card),
-        Mode::Read(file, buf, pos) => mode_read::handle(input, file, buf, pos, read_led, card),
+        Mode::Ready => ready::handle(input, error_led, write_led, read_led, sdmmc_detect),
+        Mode::Address(file) => address::handle(input, write_led, read_led, card, file),
+        Mode::Write(file, buf) => write::handle(input, write_led, file, buf, card),
+        Mode::Read(file, file_pos, buf, buf_pos) => {
+            read::handle(input, file, file_pos, buf, buf_pos, read_led, card)
+        }
         Mode::Error(err) => mode_error(err, out_bus),
     };
 
@@ -40,7 +34,7 @@ pub fn command(cx: app::command::Context) {
         Ok(Complete::Continue) => send_confirmation(out_bus),
         Ok(Complete::Reply(data)) => send_data(data, out_bus),
         Err(err) => {
-            error_led.set_low();
+            error_led.set_low(); // turn on error led
             unsafe { out_bus.write(&sm2m::Output::error()) };
             *mode = Mode::Error(err);
         }

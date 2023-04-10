@@ -87,58 +87,8 @@ impl<'a> Controller<'a> {
         Ok(size)
     }
 
-    pub fn try_read_all(
-        &mut self,
-        file: &mut SdMmcFile,
-        buf: &mut [u8],
-    ) -> Result<usize, AppError> {
-        let mut size_read = 0;
-        loop {
-            match self.read(file, &mut buf[size_read..]) {
-                Ok(size) => {
-                    size_read += size;
-                    if size_read >= buf.len() {
-                        return Ok(size_read);
-                    }
-                }
-                Err(AppError::SdMmcController(embedded_sdmmc::Error::EndOfFile)) => {
-                    return Ok(size_read)
-                }
-                Err(err) => return Err(err.into()),
-            }
-        }
-    }
-
-    pub fn read_from(
-        &mut self,
-        file: &mut SdMmcFile,
-        offset: u32,
-        buf: &mut [u8],
-    ) -> Result<usize, AppError> {
-        file.seek_from_start(offset)?;
-        self.read(file, buf)
-    }
-
-    pub fn try_read_all_from(
-        &mut self,
-        file: &mut SdMmcFile,
-        offset: u32,
-        buf: &mut [u8],
-    ) -> Result<usize, AppError> {
-        file.seek_from_start(offset)?;
-        self.try_read_all(file, buf)
-    }
-
     pub fn write(&mut self, file: &mut SdMmcFile, buf: &[u8]) -> Result<usize, AppError> {
-        let size = self.ctl.write(&mut self.vol, file, &buf)?;
+        let size = self.ctl.write(&mut self.vol, file, buf)?;
         Ok(size)
-    }
-
-    pub fn write_all(&mut self, file: &mut SdMmcFile, buf: &[u8]) -> Result<usize, AppError> {
-        let mut written = 0;
-        while written < buf.len() {
-            written += self.write(file, &buf[written..])?;
-        }
-        Ok(written)
     }
 }

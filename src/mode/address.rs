@@ -7,7 +7,7 @@ use crate::{
     peripherals::{sdmmc, sm2m},
 };
 
-use super::command::Complete;
+use super::result::{Complete, ModeResult};
 
 pub fn handle<W, R>(
     input: sm2m::Input,
@@ -15,7 +15,7 @@ pub fn handle<W, R>(
     read_led: &mut R,
     card: &mut sdmmc::Card,
     file_name: &str,
-) -> Result<Complete, AppError>
+) -> ModeResult
 where
     W: OutputPin,
     R: OutputPin,
@@ -42,7 +42,7 @@ where
     led.set_low().ok(); // turn write LED on
     Ok(Complete::Mode(Mode::Write(
         file.to_owned(),
-        Vec::with_capacity(IO_BUFFER_CAPACITY),
+        Vec::with_capacity(1024),
     )))
 }
 
@@ -55,6 +55,7 @@ where
         led.set_low().ok(); // turn read LED on
         Ok(Complete::Mode(Mode::Read(
             file.to_owned(),
+            0,
             Vec::with_capacity(IO_BUFFER_CAPACITY),
             0,
         )))

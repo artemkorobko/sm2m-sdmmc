@@ -6,7 +6,7 @@ use crate::{
     peripherals::{sdmmc, sm2m},
 };
 
-use super::command::Complete;
+use super::result::Complete;
 
 pub fn handle<EL, WL, RL, D>(
     input: sm2m::Input,
