@@ -21,7 +21,7 @@ impl<'a> Controller<'a> {
         }
     }
 
-    pub fn oped_file_read(&'a mut self, name: &str) -> Result<SdMmcFile, AppError> {
+    pub fn oped_file_read(&mut self, name: &str) -> Result<SdMmcFile, AppError> {
         let file = self.ctl.open_file_in_dir(
             &mut self.vol,
             &self.dir,

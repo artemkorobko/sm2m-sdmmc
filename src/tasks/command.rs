@@ -13,7 +13,6 @@ pub enum Complete {
     Continue,
     Mode(Mode),
     Reply(u16),
-    ReplyMode(u16, Mode),
 }
 
 pub fn command(cx: app::command::Context) {
@@ -29,9 +28,7 @@ pub fn command(cx: app::command::Context) {
         Mode::Ready => mode_ready::handle(input, error_led, write_led, read_led, sdmmc_detect),
         Mode::Address(file) => mode_address::handle(input, write_led, read_led, card, file),
         Mode::Write(file, buf) => mode_write::handle(input, file, buf, write_led, card),
-        Mode::Read(file, buf, pos) => {
-            mode_read::handle(input, file, buf, pos, read_led, card, out_bus)
-        }
+        Mode::Read(file, buf, pos) => mode_read::handle(input, file, buf, pos, read_led, card),
         Mode::Error(err) => mode_error(err, out_bus),
     };
 
@@ -42,10 +39,6 @@ pub fn command(cx: app::command::Context) {
         }
         Ok(Complete::Continue) => send_confirmation(out_bus),
         Ok(Complete::Reply(data)) => send_data(data, out_bus),
-        Ok(Complete::ReplyMode(data, m)) => {
-            *mode = m;
-            send_data(data, out_bus);
-        }
         Err(err) => {
             error_led.set_low();
             unsafe { out_bus.write(&sm2m::Output::error()) };

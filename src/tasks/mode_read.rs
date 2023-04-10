@@ -9,36 +9,46 @@ use crate::{
 
 use super::command::Complete;
 
-pub fn handle<L, W>(
+pub fn handle<L>(
     input: sm2m::Input,
     file: &str,
     buf: &mut Vec<u8>,
     pos: &mut usize,
     led: &mut L,
     card: &mut sdmmc::Card,
-    output_bus: &mut W,
 ) -> Result<Complete, AppError>
 where
     L: OutputPin,
-    W: sm2m::Write,
 {
     if input.dtei {
         led.set_high().ok(); // turn read LED off
         Ok(Complete::Mode(Mode::Ready))
     } else {
-        if buf.is_empty() {
-            // let mut ctl = card.open()?;
-            // let mut file = ctl.oped_file_read(file)?;
-            // ctl.try_read_all_from(&mut file, *pos as u32, buf)?;
+        if buf.is_empty() || buf.len() == *pos * 2 {
+            let mut ctl = card.open()?;
+            let mut file = ctl.oped_file_read(file)?;
+            ctl.try_read_all_from(&mut file, *pos as u32, buf)?; // this can fail if buffer is empty
             *pos = 0;
         }
 
-        // write data to bus
-        // let low = buf.get(*pos).unwrap();
-        // let high = buf.get(*pos).unwrap();
-        // let data = low | (high << 8);
-        // output_bus.write(&sm2m::Output::data(data));
+        match read_word(buf, *pos) {
+            Some(word) => {
+                *pos += 1;
+                Ok(Complete::Reply(word))
+            }
+            None => Ok(Complete::Reply(0)),
+        }
+    }
+}
 
-        Ok(Complete::Continue)
+fn read_word(buf: &mut Vec<u8>, pos: usize) -> Option<u16> {
+    buf.chunks(2).skip(pos).next().map(map_word)
+}
+
+fn map_word(chunk: &[u8]) -> u16 {
+    match chunk {
+        &[hi, lo] => u16::from_be_bytes([hi, lo]),
+        &[hi] => u16::from_be_bytes([hi, 0]),
+        _ => 0,
     }
 }

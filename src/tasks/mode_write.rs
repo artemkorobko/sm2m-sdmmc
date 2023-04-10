@@ -20,16 +20,26 @@ where
     L: OutputPin,
 {
     if input.dtei {
+        if !buf.is_empty() {
+            dump_buf(buf, file, card)?;
+        }
+
         led.set_high().ok(); // turn write LED off
         Ok(Complete::Mode(Mode::Ready))
     } else {
         buf.extend_from_slice(&input.data.to_be_bytes());
         if buf.len() == buf.capacity() {
-            let mut ctl = card.open()?;
-            let mut file = ctl.oped_file_append(file)?;
-            ctl.write_all(&mut file, buf)?;
+            dump_buf(buf, file, card)?;
         }
 
         Ok(Complete::Continue)
     }
+}
+
+fn dump_buf(buf: &mut Vec<u8>, file: &str, card: &mut sdmmc::Card) -> Result<usize, AppError> {
+    let mut ctl = card.open()?;
+    let mut file = ctl.oped_file_append(file)?;
+    let size = ctl.write_all(&mut file, buf)?;
+    buf.clear();
+    Ok(size)
 }
