@@ -33,35 +33,39 @@ fn write<L>(led: &mut L, card: &mut sdmmc::Card, file: &str) -> Result<Complete,
 where
     L: OutputPin,
 {
-    let mut ctl = card.open()?;
-    if ctl.is_file_exists(file)? {
-        ctl.copy_file(file, &format!("{file}.bak"))?;
-        ctl.delete_file(file)?;
-    }
+    // let mut ctl = card.open()?;
+    // if ctl.is_file_exists(file)? {
+    //     ctl.copy_file(file, &format!("{file}.bak"))?;
+    //     ctl.delete_file(file)?;
+    // }
 
-    led.set_low().ok(); // turn write LED on
-    Ok(Complete::Mode(Mode::Write(
-        file.to_owned(),
-        Vec::with_capacity(1024),
-    )))
+    // led.set_low().ok(); // turn write LED on
+    // Ok(Complete::Mode(Mode::Write(
+    //     file.to_owned(),
+    //     Vec::with_capacity(1024),
+    // )))
+
+    Ok(Complete::Continue)
 }
 
 fn read<L>(led: &mut L, card: &mut sdmmc::Card, file: &str) -> Result<Complete, AppError>
 where
     L: OutputPin,
 {
-    let mut ctl = card.open()?;
-    if ctl.is_file_exists(file)? {
-        led.set_low().ok(); // turn read LED on
-        Ok(Complete::Mode(Mode::Read(
-            file.to_owned(),
-            0,
-            Vec::with_capacity(IO_BUFFER_CAPACITY),
-            0,
-        )))
-    } else {
-        Err(AppError::SdMmcController(
-            embedded_sdmmc::Error::FileNotFound,
-        ))
-    }
+    // let mut ctl = card.open()?;
+    // if ctl.is_file_exists(file)? {
+    //     led.set_low().ok(); // turn read LED on
+    //     Ok(Complete::Mode(Mode::Read(
+    //         file.to_owned(),
+    //         0,
+    //         Vec::with_capacity(IO_BUFFER_CAPACITY),
+    //         0,
+    //     )))
+    // } else {
+    //     Err(AppError::SdMmcController(
+    //         embedded_sdmmc::Error::FileNotFound,
+    //     ))
+    // }
+
+    Ok(Complete::Continue)
 }

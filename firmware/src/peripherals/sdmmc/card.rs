@@ -15,7 +15,7 @@ pub type SdMmcSpi = embedded_sdmmc::SdMmcSpi<SpiBus, Cs>;
 pub struct Card(SdMmcSpi);
 
 impl Card {
-    pub fn open(&mut self) -> Result<Controller, AppError> {
+    pub fn open(&mut self) -> Result<Controller<'_>, AppError> {
         let spi = self.0.acquire()?;
         let time = StaticTimeSource::default();
         let mut ctl = embedded_sdmmc::Controller::new(spi, time);

@@ -3,6 +3,8 @@
 
 extern crate alloc;
 
+use panic_rtt_target as _;
+
 mod error;
 mod mode;
 mod peripherals;
@@ -16,8 +18,7 @@ mod app {
     use crate::mode::Mode;
     use crate::peripherals::*;
 
-    use core::{panic::PanicInfo, sync::atomic};
-    use rtt_target::{rprintln, rtt_init_print};
+    use rtt_target::rtt_init_print;
     use stm32f1xx_hal::{
         gpio::{self, ExtiPin},
         prelude::*,
@@ -69,6 +70,11 @@ mod app {
         let mut gpioe = cx.device.GPIOE.split();
 
         let (pa15, _pb3, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
+
+        // TODO
+        // A digital input configuration with the pin floating is a potential
+        // hazard to the circuit. It is recommended that I/O pins not used in
+        // the application be configured in output push-pull low state
 
         // Configure input bus pins
         pb4.into_pull_down_input(&mut gpiob.crl); // DI_8
@@ -152,6 +158,8 @@ mod app {
             clocks,
         );
 
+        let card = sdmmc::Card::from(embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin));
+
         // Steal buses
         // Unsafe: all use pins are set to appropriats states before.
         let input_bus = sm2m::InvertedInputBus::from(unsafe { sm2m::InputBus::steal() });
@@ -161,7 +169,7 @@ mod app {
             Shared {},
             Local {
                 state: Mode::Ready,
-                card: embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin).into(),
+                card,
                 input_bus,
                 output_bus,
                 trigger,
@@ -178,15 +186,6 @@ mod app {
     fn idle(_: idle::Context) -> ! {
         loop {
             cortex_m::asm::wfi();
-        }
-    }
-
-    #[inline(never)]
-    #[panic_handler]
-    fn panic(info: &PanicInfo) -> ! {
-        rprintln!("{}", info);
-        loop {
-            atomic::compiler_fence(atomic::Ordering::SeqCst);
         }
     }
 

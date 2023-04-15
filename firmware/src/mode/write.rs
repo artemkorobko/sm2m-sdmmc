@@ -39,8 +39,10 @@ where
 }
 
 fn save(buf: &[u8], file: &str, card: &mut sdmmc::Card) -> Result<usize, AppError> {
-    let mut ctl = card.open()?;
-    let mut file = ctl.oped_file_append(file)?;
-    let size = ctl.write(&mut file, buf)?;
-    Ok(size)
+    // let mut ctl = card.open()?;
+    // let mut file = ctl.oped_file_append(file)?;
+    // let size = ctl.write(&mut file, buf)?;
+    // Ok(size)
+
+    Ok(0)
 }

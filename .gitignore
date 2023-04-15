@@ -1,4 +1,4 @@
-/target
+firmware/target
 fp-lib-table
 *-backups
 _autosave*

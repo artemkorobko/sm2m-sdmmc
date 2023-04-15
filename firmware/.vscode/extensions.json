@@ -4,6 +4,10 @@
     // List of extensions which should be recommended for users of this workspace.
     "recommendations": [
         "rust-lang.rust-analyzer",
+        "bungcip.better-toml",
+        "serayuzgur.crates",
+        "probe-rs.probe-rs-debugger",
+        "usernamehw.errorlens"
     ],
     // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
     "unwantedRecommendations": []
