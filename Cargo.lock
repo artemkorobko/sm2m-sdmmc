@@ -408,6 +408,7 @@ dependencies = [
  "embedded-alloc",
  "embedded-hal",
  "embedded-sdmmc",
+ "heapless",
  "rtt-target",
  "stm32f1xx-hal",
 ]
