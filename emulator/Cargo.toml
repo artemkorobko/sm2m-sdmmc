@@ -1,0 +1,25 @@
+[package]
+name = "emulator"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+cortex-m-rtic = "1.1"
+defmt = "0.3"
+defmt-rtt = "0.4"
+
+[dependencies.cortex-m]
+version = "0.7"
+features = ["critical-section-single-core"]
+
+[dependencies.stm32f1xx-hal]
+version = "0.10"
+features = ["rt", "stm32f107"]
+
+[dependencies.panic-probe]
+version = "0.3"
+features = ["print-defmt"]
+
+[profile.release]
+debug = true
+lto = true
