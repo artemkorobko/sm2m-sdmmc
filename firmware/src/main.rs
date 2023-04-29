@@ -19,7 +19,6 @@ mod app {
     use crate::mode::Mode;
     use crate::peripherals::*;
 
-    use rtt_target::{rtt_init_print, rprintln};
     use stm32f1xx_hal::{
         gpio::{self, ExtiPin},
         prelude::*,
@@ -41,10 +40,8 @@ mod app {
 
     #[init]
     fn init(mut cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        rtt_init_print!();
-
         {
-            rprintln!("Create heap...");
+            defmt::info!("Create heap...");
             use core::mem::MaybeUninit;
             const HEAP_SIZE: usize = 1024 * 16;
             static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
@@ -52,7 +49,7 @@ mod app {
         }
 
         // Configure MCU
-        rprintln!("Configure MCU...");
+        defmt::info!("Configure MCU...");
         let mut afio = cx.device.AFIO.constrain();
         let mut flash = cx.device.FLASH.constrain();
         let rcc = cx.device.RCC.constrain();
@@ -65,7 +62,7 @@ mod app {
             .freeze(&mut flash.acr);
 
         // Configure GPIO
-        rprintln!("Configure GPIO...");
+        defmt::info!("Configure GPIO...");
         let mut gpioa = cx.device.GPIOA.split();
         let mut gpiob = cx.device.GPIOB.split();
         let mut gpioc = cx.device.GPIOC.split();
@@ -153,7 +150,7 @@ mod app {
         );
 
         // Configure LED indicators
-        rprintln!("Configure LED indicators...");
+        defmt::info!("Configure LED indicators...");
         let indicator_pins = IndicatorPins {
             pa0: gpioa.pa0,
             pa1: gpioa.pa1,
@@ -164,7 +161,7 @@ mod app {
         let mut indicators = Indicators::configure(indicator_pins);
 
         // Configure SDMMC
-        rprintln!("Configure SDMMC...");
+        defmt::info!("Configure SDMMC...");
         let sdmmc_detect_pin = gpioa.pa3.into_pull_up_input(&mut gpioa.crl);
         let sdmmc_cs_pin = gpioa.pa4.into_push_pull_output(&mut gpioa.crl);
         let sdmmc_mosi_pin = gpioa.pa7.into_alternate_push_pull(&mut gpioa.crl);
@@ -185,19 +182,19 @@ mod app {
         let card = sdmmc::Card::from(embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin));
 
         // Indicate adapter startup
-        rprintln!("Indicate adapter setup");
+        defmt::info!("Indicate adapter setup");
         indicators.all_on();
         cortex_m::asm::delay(72_000_000 * 2);
         indicators.all_off();
 
         // Enable SM2M bus interrupt
-        rprintln!("Enable SM2M interrupt");
+        defmt::info!("Enable SM2M interrupt");
         let mut trigger = gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // DTLI
         trigger.make_interrupt_source(&mut afio);
         trigger.enable_interrupt(&mut cx.device.EXTI);
         trigger.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
 
-        rprintln!("Run");
+        defmt::info!("Run");
 
         (
             Shared {},

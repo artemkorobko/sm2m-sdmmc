@@ -8,7 +8,7 @@ use crate::{
 };
 
 pub fn command(cx: app::command::Context) {
-    rtt_target::rprintln!("Inside SM2M interrupt");
+    defmt::info!("Inside SM2M interrupt");
 
     let mode = cx.local.mode;
     let card = cx.local.card;
