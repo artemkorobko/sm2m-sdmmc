@@ -509,6 +509,10 @@
     [
       "3fd1b99e-d945-407e-bad5-281af3d4b9f5",
       "Connectors"
+    ],
+    [
+      "99c72709-3b9e-4c7e-b8c6-478bb64985a0",
+      "MCU"
     ]
   ],
   "text_variables": {}
