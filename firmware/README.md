@@ -74,7 +74,7 @@ cargo flash --chip STM32F103VB
 
 ## Build and flash release version of firmware
 ```
-cargo flash --release --chip STM32F103C8
+cargo flash --release --chip STM32F103VB
 ```
 
 # Run and monitor firmware

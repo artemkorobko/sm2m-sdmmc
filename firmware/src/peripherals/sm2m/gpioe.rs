@@ -4,26 +4,28 @@ use stm32f1xx_hal::{device, gpio};
 
 use super::io;
 
+pub struct GPIOEConfig<'a> {
+    pub pe0: gpio::PE0,
+    pub pe1: gpio::PE1,
+    pub pe2: gpio::PE2,
+    pub pe3: gpio::PE3,
+    pub pe4: gpio::PE4,
+    pub pe5: gpio::PE5,
+    pub pe6: gpio::PE6,
+    pub crl: &'a mut gpio::Cr<'E', false>,
+}
+
 pub struct SM2MGPIOEMap(device::GPIOE);
 
 impl SM2MGPIOEMap {
-    pub fn configure(
-        pe0: gpio::PE0,
-        pe1: gpio::PE1,
-        pe2: gpio::PE2,
-        pe3: gpio::PE3,
-        pe4: gpio::PE4,
-        pe5: gpio::PE5,
-        pe6: gpio::PE6,
-        crl: &mut gpio::Cr<'E', false>,
-    ) -> SM2MGPIOEMap {
-        pe0.into_pull_down_input(crl); // DI_2
-        pe1.into_pull_down_input(crl); // DI_1
-        pe2.into_pull_down_input(crl); // DI_3
-        pe3.into_pull_down_input(crl); // DI_4
-        pe4.into_pull_down_input(crl); // DI_6
-        pe5.into_pull_down_input(crl); // DI_5
-        pe6.into_pull_down_input(crl); // DI_7
+    pub fn configure(config: GPIOEConfig) -> Self {
+        config.pe0.into_pull_down_input(config.crl); // DI_2
+        config.pe1.into_pull_down_input(config.crl); // DI_1
+        config.pe2.into_pull_down_input(config.crl); // DI_3
+        config.pe3.into_pull_down_input(config.crl); // DI_4
+        config.pe4.into_pull_down_input(config.crl); // DI_6
+        config.pe5.into_pull_down_input(config.crl); // DI_5
+        config.pe6.into_pull_down_input(config.crl); // DI_7
         SM2MGPIOEMap(unsafe { device::Peripherals::steal() }.GPIOE)
     }
 }

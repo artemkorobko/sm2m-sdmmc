@@ -4,29 +4,31 @@ use stm32f1xx_hal::{device, gpio};
 
 use super::io;
 
+pub struct GPIOCConfig<'a> {
+    pub pc3: gpio::PC3,
+    pub pc6: gpio::PC6,
+    pub pc7: gpio::PC7,
+    pub pc8: gpio::PC8,
+    pub pc9: gpio::PC9,
+    pub pc10: gpio::PC10,
+    pub pc11: gpio::PC11,
+    pub pc12: gpio::PC12,
+    pub crl: &'a mut gpio::Cr<'C', false>,
+    pub crh: &'a mut gpio::Cr<'C', true>,
+}
+
 pub struct SM2MGPIOCMap(device::GPIOC);
 
 impl SM2MGPIOCMap {
-    pub fn configure(
-        pc3: gpio::PC3,
-        pc6: gpio::PC6,
-        pc7: gpio::PC7,
-        pc8: gpio::PC8,
-        pc9: gpio::PC9,
-        pc10: gpio::PC10,
-        pc11: gpio::PC11,
-        pc12: gpio::PC12,
-        crl: &mut gpio::Cr<'C', false>,
-        crh: &mut gpio::Cr<'C', true>,
-    ) -> SM2MGPIOCMap {
-        pc3.into_push_pull_output(crl); // SETE
-        pc6.into_push_pull_output(crl); // DO_9
-        pc7.into_push_pull_output(crl); // DO_6
-        pc8.into_push_pull_output(crh); // DO_5
-        pc9.into_push_pull_output(crh); // DO_4
-        pc10.into_push_pull_output(crh); // DO_0
-        pc11.into_push_pull_output(crh); // DTEO
-        pc12.into_push_pull_output(crh); // CTRLD
+    pub fn configure(config: GPIOCConfig) -> Self {
+        config.pc3.into_push_pull_output(config.crl); // SETE
+        config.pc6.into_push_pull_output(config.crl); // DO_9
+        config.pc7.into_push_pull_output(config.crl); // DO_6
+        config.pc8.into_push_pull_output(config.crh); // DO_5
+        config.pc9.into_push_pull_output(config.crh); // DO_4
+        config.pc10.into_push_pull_output(config.crh); // DO_0
+        config.pc11.into_push_pull_output(config.crh); // DTEO
+        config.pc12.into_push_pull_output(config.crh); // CTRLD
         SM2MGPIOCMap(unsafe { device::Peripherals::steal() }.GPIOC)
     }
 }

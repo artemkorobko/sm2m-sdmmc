@@ -4,24 +4,26 @@ use stm32f1xx_hal::{device, gpio};
 
 use super::io;
 
+pub struct GPIOAConfig<'a> {
+    pub pa8: gpio::PA8,
+    pub pa9: gpio::PA9,
+    pub pa10: gpio::PA10,
+    pub pa11: gpio::PA11,
+    pub pa12: gpio::PA12,
+    pub pa15: gpio::PA15,
+    pub crh: &'a mut gpio::Cr<'A', true>,
+}
+
 pub struct SM2MGPIOAMap(device::GPIOA);
 
 impl SM2MGPIOAMap {
-    pub fn configure(
-        pa8: gpio::PA8,
-        pa9: gpio::PA9,
-        pa10: gpio::PA10,
-        pa11: gpio::PA11,
-        pa12: gpio::PA12,
-        pa15: gpio::PA15,
-        crh: &mut gpio::Cr<'A', true>,
-    ) -> SM2MGPIOAMap {
-        pa8.into_push_pull_output(crh); // DO_3
-        pa9.into_push_pull_output(crh); // CTRLO_1
-        pa10.into_push_pull_output(crh); // DO_2
-        pa11.into_push_pull_output(crh); // CTRLO_0
-        pa12.into_push_pull_output(crh); // DO_1
-        pa15.into_push_pull_output(crh); // ERRO
+    pub fn configure(config: GPIOAConfig) -> Self {
+        config.pa8.into_push_pull_output(config.crh); // DO_3
+        config.pa9.into_push_pull_output(config.crh); // CTRLO_1
+        config.pa10.into_push_pull_output(config.crh); // DO_2
+        config.pa11.into_push_pull_output(config.crh); // CTRLO_0
+        config.pa12.into_push_pull_output(config.crh); // DO_1
+        config.pa15.into_push_pull_output(config.crh); // ERRO
         SM2MGPIOAMap(unsafe { device::Peripherals::steal() }.GPIOA)
     }
 }

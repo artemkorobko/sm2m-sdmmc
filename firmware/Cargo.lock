@@ -98,7 +98,7 @@ checksum = "f0f6f3e36f203cfedbc78b357fb28730aa2c6dc1ab060ee5c2405e843988d3c7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -126,7 +126,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rtic-syntax",
- "syn",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -134,6 +134,38 @@ name = "critical-section"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6548a0ad5d2549e111e1f6a11a6c2e2d00ce6a3dafe22948d67c2b443f775e52"
+
+[[package]]
+name = "defmt"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "956673bd3cb347512bf988d1e8d89ac9a82b64f6eec54d3c01c3529dac019882"
+dependencies = [
+ "bitflags",
+ "defmt-macros",
+]
+
+[[package]]
+name = "defmt-macros"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82610855c67a4dc36299cc6bfcf140f329e4f013582531c7ba7d32512ddabc47"
+dependencies = [
+ "defmt-parser",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "defmt-parser"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e15e994575e38332cf4a2dc9dc745ff6a65695d37a41e00efadd57fcd42c1ba4"
+dependencies = [
+ "thiserror",
+]
 
 [[package]]
 name = "embedded-alloc"
@@ -279,13 +311,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d5439c4ad607c3c23abf66de8c8bf57ba8adcd1f129e699851a6e43935d339d"
 
 [[package]]
-name = "panic-rtt-target"
-version = "0.1.2"
+name = "panic-probe"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d6ab67bc881453e4c90f958c657c1303670ea87bc1a16e87fd71a40f656dce9"
+checksum = "aa6fa5645ef5a760cd340eaa92af9c1ce131c8c09e7f8926d8a24b59d26652b9"
 dependencies = [
  "cortex-m",
- "rtt-target 0.3.1",
+ "defmt",
 ]
 
 [[package]]
@@ -297,7 +329,7 @@ dependencies = [
  "proc-macro-error-attr",
  "proc-macro2",
  "quote",
- "syn",
+ "syn 1.0.109",
  "version_check",
 ]
 
@@ -351,16 +383,7 @@ dependencies = [
  "indexmap",
  "proc-macro2",
  "quote",
- "syn",
-]
-
-[[package]]
-name = "rtt-target"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "065d6058bb1204f51a562a67209e1817cf714759d5cf845aa45c75fa7b0b9d9b"
-dependencies = [
- "ufmt-write",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -427,8 +450,8 @@ dependencies = [
  "embedded-alloc",
  "embedded-hal",
  "embedded-sdmmc",
- "panic-rtt-target",
- "rtt-target 0.4.0",
+ "panic-probe",
+ "rtt-target",
  "stm32f1xx-hal",
 ]
 
@@ -499,6 +522,37 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "syn"
+version = "2.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a34fcf3e8b60f57e6a14301a2e916d323af98b0ea63c599441eec8558660c822"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-ident",
+]
+
+[[package]]
+name = "thiserror"
+version = "1.0.40"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978c9a314bd8dc99be594bc3c175faaa9794be04a5a5e153caba6915336cebac"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.40"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9456a42c5b0d803c8cd86e73dd7cc9edd429499f37a3550d286d5e86720569f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.15",
 ]
 
 [[package]]

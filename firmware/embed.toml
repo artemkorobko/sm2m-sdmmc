@@ -33,7 +33,7 @@ halt_afterwards = false
 
 [default.general]
 # The chip name of the chip to be debugged.
-chip = "STM32F103VB"
+chip = "STM32F107VC"
 # A list of chip descriptions to be loaded during runtime.
 chip_descriptions = []
 # The default log level to be used. Possible values are one of:
@@ -64,7 +64,7 @@ enabled = true
 #              Defmt  - Format output on the host, see https://defmt.ferrous-systems.com/
 #              BinaryLE - Display as raw hex
 channels = [
-    # { up = 0, down = 0, name = "name", up_mode = "BlockIfFull", format = "Defmt" },
+    { up = 0, down = 0, name = "RTT Console", up_mode = "BlockIfFull", format = "Defmt" },
 ]
 # The duration in ms for which the logger should retry to attach to RTT.
 timeout = 3000

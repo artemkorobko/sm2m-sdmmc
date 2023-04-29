@@ -1,42 +1,34 @@
 use core::ops::{Deref, DerefMut};
 
-use stm32f1xx_hal::{
-    afio, device,
-    gpio::{self, ExtiPin},
-};
+use stm32f1xx_hal::{device, gpio};
 
 use super::io;
+
+pub struct GPIOBConfig<'a> {
+    pub pb4: gpio::PB4,
+    pub pb6: gpio::PB6,
+    pub pb7: gpio::PB7,
+    pub pb8: gpio::PB8,
+    pub pb9: gpio::PB9,
+    pub pb12: gpio::PB12,
+    pub pb14: gpio::PB14,
+    pub pb15: gpio::PB15,
+    pub crl: &'a mut gpio::Cr<'B', false>,
+    pub crh: &'a mut gpio::Cr<'B', true>,
+}
 
 pub struct SM2MGPIOBMap(device::GPIOB);
 
 impl SM2MGPIOBMap {
-    pub fn configure(
-        pb4: gpio::PB4,
-        pb6: gpio::PB6,
-        pb7: gpio::PB7,
-        pb8: gpio::PB8,
-        pb9: gpio::PB9,
-        pb12: gpio::PB12,
-        pb13: gpio::PB13,
-        pb14: gpio::PB14,
-        pb15: gpio::PB15,
-        crl: &mut gpio::Cr<'B', false>,
-        crh: &mut gpio::Cr<'B', true>,
-        afio: &mut afio::Parts,
-        exti: &mut device::EXTI,
-    ) -> SM2MGPIOBMap {
-        pb4.into_pull_down_input(crl); // DI_8
-        pb6.into_pull_down_input(crl); // DTSI
-        pb7.into_pull_down_input(crl); // DI_0
-        pb8.into_pull_down_input(crh); // CTRLI_1
-        pb9.into_pull_down_input(crh); // RSTI
-        pb12.into_push_pull_output(crh); // RSTE
-        let mut trigger = pb13.into_pull_down_input(crh); // DTLI
-        trigger.make_interrupt_source(afio);
-        trigger.enable_interrupt(exti);
-        trigger.trigger_on_edge(exti, gpio::Edge::Falling);
-        pb14.into_pull_down_input(crh); // DTEI
-        pb15.into_push_pull_output(crh); // DO_14
+    pub fn configure(config: GPIOBConfig) -> Self {
+        config.pb4.into_pull_down_input(config.crl); // DI_8
+        config.pb6.into_pull_down_input(config.crl); // DTSI
+        config.pb7.into_pull_down_input(config.crl); // DI_0
+        config.pb8.into_pull_down_input(config.crh); // CTRLI_1
+        config.pb9.into_pull_down_input(config.crh); // RSTI
+        config.pb12.into_push_pull_output(config.crh); // RSTE
+        config.pb14.into_pull_down_input(config.crh); // DTEI
+        config.pb15.into_push_pull_output(config.crh); // DO_14
         SM2MGPIOBMap(unsafe { device::Peripherals::steal() }.GPIOB)
     }
 }

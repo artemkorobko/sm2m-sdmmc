@@ -4,45 +4,47 @@ use stm32f1xx_hal::{device, gpio};
 
 use super::io;
 
+pub struct GPIODConfig<'a> {
+    pub pd0: gpio::PD0,
+    pub pd1: gpio::PD1,
+    pub pd2: gpio::PD2,
+    pub pd3: gpio::PD3,
+    pub pd4: gpio::PD4,
+    pub pd5: gpio::PD5,
+    pub pd6: gpio::PD6,
+    pub pd7: gpio::PD7,
+    pub pd8: gpio::PD8,
+    pub pd9: gpio::PD9,
+    pub pd10: gpio::PD10,
+    pub pd11: gpio::PD11,
+    pub pd12: gpio::PD12,
+    pub pd13: gpio::PD13,
+    pub pd14: gpio::PD14,
+    pub pd15: gpio::PD15,
+    pub crl: &'a mut gpio::Cr<'D', false>,
+    pub crh: &'a mut gpio::Cr<'D', true>,
+}
+
 pub struct SM2MGPIODMap(device::GPIOD);
 
 impl SM2MGPIODMap {
-    pub fn configure(
-        pd0: gpio::PD0,
-        pd1: gpio::PD1,
-        pd2: gpio::PD2,
-        pd3: gpio::PD3,
-        pd4: gpio::PD4,
-        pd5: gpio::PD5,
-        pd6: gpio::PD6,
-        pd7: gpio::PD7,
-        pd8: gpio::PD8,
-        pd9: gpio::PD9,
-        pd10: gpio::PD10,
-        pd11: gpio::PD11,
-        pd12: gpio::PD12,
-        pd13: gpio::PD13,
-        pd14: gpio::PD14,
-        pd15: gpio::PD15,
-        crl: &mut gpio::Cr<'D', false>,
-        crh: &mut gpio::Cr<'D', true>,
-    ) -> SM2MGPIODMap {
-        pd0.into_pull_down_input(crl); // DI_15
-        pd1.into_pull_down_input(crl); // DI_13
-        pd2.into_pull_down_input(crl); // CTRLI_0
-        pd3.into_pull_down_input(crl); // DI_14
-        pd4.into_pull_down_input(crl); // DI_12
-        pd5.into_pull_down_input(crl); // DI_10
-        pd6.into_pull_down_input(crl); // DI_9
-        pd7.into_pull_down_input(crl); // DI_11
-        pd8.into_push_pull_output(crh); // DO_11
-        pd9.into_push_pull_output(crh); // DO_15
-        pd10.into_push_pull_output(crh); // RDY
-        pd11.into_push_pull_output(crh); // DO_12
-        pd12.into_push_pull_output(crh); // DO_13
-        pd13.into_push_pull_output(crh); // DO_10
-        pd14.into_push_pull_output(crh); // DO_8
-        pd15.into_push_pull_output(crh); // DO_7
+    pub fn configure(config: GPIODConfig) -> Self {
+        config.pd0.into_pull_down_input(config.crl); // DI_15
+        config.pd1.into_pull_down_input(config.crl); // DI_13
+        config.pd2.into_pull_down_input(config.crl); // CTRLI_0
+        config.pd3.into_pull_down_input(config.crl); // DI_14
+        config.pd4.into_pull_down_input(config.crl); // DI_12
+        config.pd5.into_pull_down_input(config.crl); // DI_10
+        config.pd6.into_pull_down_input(config.crl); // DI_9
+        config.pd7.into_pull_down_input(config.crl); // DI_11
+        config.pd8.into_push_pull_output(config.crh); // DO_11
+        config.pd9.into_push_pull_output(config.crh); // DO_15
+        config.pd10.into_push_pull_output(config.crh); // RDY
+        config.pd11.into_push_pull_output(config.crh); // DO_12
+        config.pd12.into_push_pull_output(config.crh); // DO_13
+        config.pd13.into_push_pull_output(config.crh); // DO_10
+        config.pd14.into_push_pull_output(config.crh); // DO_8
+        config.pd15.into_push_pull_output(config.crh); // DO_7
         SM2MGPIODMap(unsafe { device::Peripherals::steal() }.GPIOD)
     }
 

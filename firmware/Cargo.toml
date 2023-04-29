@@ -18,19 +18,10 @@ features = ["critical-section-single-core"]
 version = "0.10"
 features = ["rt", "stm32f103", "medium"]
 
-[dependencies.panic-rtt-target]
-version = "0.1"
-features = ["cortex-m"]
-
-[[bin]]
-name = "sm2m-sdmmc"
-test = false
-bench = false
+[dependencies.panic-probe]
+version = "0.3"
+features = ["print-defmt"]
 
 [profile.release]
 debug = true
-codegen-units = 1
 lto = true
-# Add the following config to .cargo/config.toml if opt-level = "s" is enabled
-# rustflags = ["-C", "inline-threshold=275"]
-# opt-level = "s" # optimize for size, default is 3 which is optimization for speed
