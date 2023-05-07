@@ -4,6 +4,7 @@
 use defmt_rtt as _;
 use panic_probe as _;
 
+mod emulator;
 mod input;
 mod keyboard;
 mod output;
@@ -12,18 +13,17 @@ mod output;
 mod app {
     use stm32f1xx_hal::{gpio, gpio::ExtiPin, pac, prelude::*, timer};
 
-    use crate::{input, keyboard, output};
+    use crate::{emulator, input, keyboard, output};
 
     #[shared]
     struct Shared {
-        input: input::Bus,
-        output: output::Bus,
+        emulator: emulator::Machine,
+        debug: bool,
     }
 
     #[local]
     struct Local {
         keyboard: keyboard::Keyboard,
-        led: gpio::Pin<'D', 7, gpio::Output>,
         timer: timer::CounterUs<pac::TIM1>,
     }
 
@@ -36,8 +36,7 @@ mod app {
             .RCC
             .constrain()
             .cfgr
-            // .use_hse(25.MHz())
-            .sysclk(72.MHz())
+            .hclk(72.MHz())
             .freeze(&mut flash.acr);
 
         let mut gpioa = cx.device.GPIOA.split();
@@ -49,17 +48,21 @@ mod app {
         // Disable JTAG
         let (pa15, _pb3, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
 
-        let led = gpiod
-            .pd7
-            .into_push_pull_output_with_state(&mut gpiod.crl, gpio::PinState::High);
-
+        // Configure keyboard
         let config = keyboard::Pins {
-            reset: gpioe.pe8.into_pull_down_input(&mut gpioe.crh),
-            run: gpioe.pe9.into_pull_down_input(&mut gpioe.crh),
-            step: gpioe.pe10.into_pull_down_input(&mut gpioe.crh),
+            start_write: gpioe.pe8.into_pull_down_input(&mut gpioe.crh),
+            start_read: gpioe.pe10.into_pull_down_input(&mut gpioe.crh),
+            step: gpioe.pe9.into_pull_down_input(&mut gpioe.crh),
+            stop: gpiob.pb2.into_pull_down_input(&mut gpiob.crl),
+            debug: gpioe.pe7.into_pull_down_input(&mut gpioe.crl),
         };
 
         let keyboard = keyboard::Keyboard::new(config);
+
+        // Configure LED
+        let led = gpiod
+            .pd7
+            .into_push_pull_output_with_state(&mut gpiod.crl, gpio::PinState::High);
 
         // Configure input bus
         let input_pins = input::Pins {
@@ -118,6 +121,9 @@ mod app {
 
         let output = output::Bus::new(output_pins);
 
+        // Create emulator
+        let emulator = emulator::Machine::new(input, output, led);
+
         // Configure RDY interrupt
         let mut trigger = pa15.into_pull_down_input(&mut gpioa.crh); // RDY
         trigger.make_interrupt_source(&mut afio);
@@ -129,32 +135,37 @@ mod app {
         timer.start(1.millis()).unwrap();
         timer.listen(timer::Event::Update);
 
+        defmt::println!("Ready");
+
         (
-            Shared { input, output },
-            Local {
-                keyboard,
-                led,
-                timer,
+            Shared {
+                emulator,
+                debug: true,
             },
+            Local { keyboard, timer },
             init::Monotonics(),
         )
     }
 
-    #[task(binds = TIM1_UP, priority = 2, local = [keyboard, led, timer, debouncer: u32 = 0, notified: bool = false])]
+    #[task(
+        binds = TIM1_UP,
+        priority = 2,
+        local = [keyboard, timer, debouncer: u32 = 0, notified: bool = false]
+    )]
     fn keyboard_timer(cx: keyboard_timer::Context) {
         const MAX_DEBOUNCES: u32 = 10;
         let debouncer = cx.local.debouncer;
         let notified = cx.local.notified;
-        let keys = cx.local.keyboard.read_keys();
+        let key = cx.local.keyboard.read_key();
 
-        if keys.is_pressed() && *debouncer < MAX_DEBOUNCES {
+        if key.is_some() && *debouncer < MAX_DEBOUNCES {
             *debouncer += 1;
         } else if *debouncer > 0 {
             *debouncer -= 1;
         }
 
         if *debouncer == MAX_DEBOUNCES && !*notified {
-            keyboard_handler::spawn(keys).ok();
+            keyboard_handler::spawn(key.unwrap()).ok();
             *notified = true;
         } else if *debouncer == 0 && *notified {
             *notified = false;
@@ -163,20 +174,46 @@ mod app {
         cx.local.timer.clear_interrupt(timer::Event::Update);
     }
 
-    #[task(priority = 3, shared = [output])]
-    fn keyboard_handler(mut cx: keyboard_handler::Context, keys: keyboard::Keys) {
-        if keys.reset {
-            defmt::println!("Send RESET CMD");
-            cx.shared
-                .output
-                .lock(|output| output.write_reversed(output::Frame::Stop));
-        } else if keys.step {
-            defmt::println!("Step is pressed");
-        }
+    #[task(priority = 3, shared = [emulator, debug])]
+    fn keyboard_handler(cx: keyboard_handler::Context, key: keyboard::Key) {
+        let emulator = cx.shared.emulator;
+        let debug = cx.shared.debug;
+
+        (emulator, debug).lock(|emulator, debug| match key {
+            keyboard::Key::StartRead => {
+                defmt::println!("Start READ, debug: {}", debug);
+                emulator.start_read(*debug);
+            }
+            keyboard::Key::StartWrite => {
+                defmt::println!("Start WRITE, debug: {}", debug);
+                emulator.start_write(*debug);
+            }
+            keyboard::Key::Step => {
+                defmt::println!("Step");
+                emulator.step();
+            }
+            keyboard::Key::Stop => {
+                defmt::println!("Stop");
+                emulator.stop();
+            }
+            keyboard::Key::Debug => {
+                *debug = !*debug;
+                defmt::println!("Debug: {}", debug);
+            }
+        });
     }
 
-    #[task(binds = EXTI15_10, priority = 1)]
-    fn rdy(_: rdy::Context) {
-        defmt::println!("Ready");
+    #[task(binds = EXTI15_10, priority = 1, shared = [emulator, debug])]
+    fn rdy(cx: rdy::Context) {
+        let emulator = cx.shared.emulator;
+        let debug = cx.shared.debug;
+
+        (emulator, debug).lock(|emulator, debug| {
+            if !*debug {
+                emulator.step();
+            } else {
+                defmt::println!("Received reply. Press 'Step' button");
+            }
+        });
     }
 }

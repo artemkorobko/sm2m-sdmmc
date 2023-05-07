@@ -1,8 +1,8 @@
 [default.probe]
 # USB vendor ID
-# usb_vid = "1337"
+usb_vid = "0483"
 # USB product ID
-# usb_pid = "1337"
+usb_pid = "3748"
 # Serial number
 # serial = "12345678"
 # The protocol to be used for communicating with the target.
@@ -64,7 +64,7 @@ enabled = true
 #              Defmt  - Format output on the host, see https://defmt.ferrous-systems.com/
 #              BinaryLE - Display as raw hex
 channels = [
-    { up = 0, down = 0, name = "RTT Console", up_mode = "BlockIfFull", format = "Defmt" },
+    { up = 0, down = 0, name = "Emulator RTT Console", up_mode = "BlockIfFull", format = "Defmt" },
 ]
 # The duration in ms for which the logger should retry to attach to RTT.
 timeout = 3000

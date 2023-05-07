@@ -1,22 +1,22 @@
 use stm32f1xx_hal::{device, gpio};
 
-pub type OutputPin<const P: char, const N: u8> = gpio::Pin<P, N, gpio::Output<gpio::PushPull>>;
+pub type Pin<const P: char, const N: u8> = gpio::Pin<P, N, gpio::Output<gpio::PushPull>>;
 
 macro_rules! port_write {
     ($GPIO:expr, $CLR_MASK:expr, $BIT_MASK:expr) => {
-        let gpio = stringify!($GPIO);
+        // let gpio = stringify!($GPIO);
         $GPIO.odr.modify(|r, w| {
             let mut bits = r.bits(); // read bits
-            defmt::println!(
-                "{} bits {:#034b}, clr_mask: {:#034b}, bit_mask: {:#034b}",
-                gpio,
-                bits,
-                $CLR_MASK,
-                $BIT_MASK
-            );
+            // defmt::println!(
+            //     "{} bits {:#034b}, clr_mask: {:#034b}, bit_mask: {:#034b}",
+            //     gpio,
+            //     bits,
+            //     $CLR_MASK,
+            //     $BIT_MASK
+            // );
             bits &= $CLR_MASK; // clear bits before applying mask
             bits |= $BIT_MASK & ($CLR_MASK ^ 0xFFFF); // apply mask
-            defmt::println!("{} result {:#034b}", gpio, bits);
+            // defmt::println!("{} result {:#034b}", gpio, bits);
             unsafe { w.bits(bits) } // write bits
         });
     };
@@ -32,28 +32,28 @@ pub enum Frame {
 }
 
 pub struct Pins {
-    pub di_0: OutputPin<'B', 4>,
-    pub di_1: OutputPin<'B', 5>,
-    pub di_2: OutputPin<'B', 6>,
-    pub di_3: OutputPin<'B', 7>,
-    pub di_4: OutputPin<'B', 8>,
-    pub di_5: OutputPin<'B', 9>,
-    pub di_6: OutputPin<'E', 2>,
-    pub di_7: OutputPin<'E', 3>,
-    pub di_8: OutputPin<'E', 4>,
-    pub di_9: OutputPin<'E', 5>,
-    pub di_10: OutputPin<'E', 6>,
-    pub di_11: OutputPin<'C', 13>,
-    pub di_12: OutputPin<'C', 0>,
-    pub di_13: OutputPin<'C', 2>,
-    pub di_14: OutputPin<'C', 3>,
-    pub di_15: OutputPin<'A', 0>,
-    pub ctrli_0: OutputPin<'A', 3>, // temprarly ignored
-    pub ctrli_1: OutputPin<'A', 5>, // temprarly ignored
-    pub dtsi: OutputPin<'A', 6>,    // ignored in favour of DTLI
-    pub dtli: OutputPin<'A', 7>,
-    pub dtei: OutputPin<'C', 4>,
-    pub rsti: OutputPin<'C', 5>,
+    pub di_0: Pin<'B', 4>,
+    pub di_1: Pin<'B', 5>,
+    pub di_2: Pin<'B', 6>,
+    pub di_3: Pin<'B', 7>,
+    pub di_4: Pin<'B', 8>,
+    pub di_5: Pin<'B', 9>,
+    pub di_6: Pin<'E', 2>,
+    pub di_7: Pin<'E', 3>,
+    pub di_8: Pin<'E', 4>,
+    pub di_9: Pin<'E', 5>,
+    pub di_10: Pin<'E', 6>,
+    pub di_11: Pin<'C', 13>,
+    pub di_12: Pin<'C', 0>,
+    pub di_13: Pin<'C', 2>,
+    pub di_14: Pin<'C', 3>,
+    pub di_15: Pin<'A', 0>,
+    pub ctrli_0: Pin<'A', 3>, // temprarly ignored
+    pub ctrli_1: Pin<'A', 5>, // temprarly ignored
+    pub dtsi: Pin<'A', 6>,    // ignored in favour of DTLI
+    pub dtli: Pin<'A', 7>,
+    pub dtei: Pin<'C', 4>,
+    pub rsti: Pin<'C', 5>,
 }
 
 pub struct Bus {

@@ -69,12 +69,12 @@ Before flashing make sure probe has been attached to your computer and operates 
 
 ## Build and flash debug version of firmware
 ```
-cargo flash --chip STM32F103VB
+cargo flash --chip STM32F107VC
 ```
 
 ## Build and flash release version of firmware
 ```
-cargo flash --release --chip STM32F103VB
+cargo flash --release --chip STM32F107VC
 ```
 
 # Run and monitor firmware
