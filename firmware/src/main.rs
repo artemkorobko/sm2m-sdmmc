@@ -6,11 +6,13 @@ use panic_probe as _;
 
 mod error;
 // mod mode;
+mod adapter;
 mod peripherals;
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER, PVD, CAN_RX1, CAN_SCE])]
 mod app {
     // use crate::mode::Mode;
+    use crate::adapter;
     use crate::peripherals::*;
 
     use stm32f1xx_hal::{
@@ -24,10 +26,8 @@ mod app {
 
     #[local]
     struct Local {
-        // mode: Mode,
+        adapter: adapter::Device,
         card: sdmmc::Card,
-        input: sm2m::input::Bus,
-        output: sm2m::output::Bus,
         dtli: gpio::PB13<gpio::Input<gpio::PullDown>>,
         sdmmc_detect_pin: gpio::PA3<gpio::Input<gpio::PullUp>>,
         indicators: Indicators,
@@ -36,7 +36,6 @@ mod app {
     #[init]
     fn init(mut cx: init::Context) -> (Shared, Local, init::Monotonics) {
         // Configure MCU
-        defmt::println!("Configure MCU...");
         let mut afio = cx.device.AFIO.constrain();
         let mut flash = cx.device.FLASH.constrain();
         let rcc = cx.device.RCC.constrain();
@@ -49,7 +48,6 @@ mod app {
             .freeze(&mut flash.acr);
 
         // Configure GPIO
-        defmt::println!("Configure GPIO...");
         let mut gpioa = cx.device.GPIOA.split();
         let mut gpiob = cx.device.GPIOB.split();
         let mut gpioc = cx.device.GPIOC.split();
@@ -117,7 +115,6 @@ mod app {
         let output = sm2m::output::Bus::new(pins);
 
         // Configure LED indicators
-        defmt::info!("Configure LED indicators...");
         let indicator_pins = IndicatorPins {
             pa0: gpioa.pa0,
             pa1: gpioa.pa1,
@@ -128,7 +125,6 @@ mod app {
         let mut indicators = Indicators::configure(indicator_pins);
 
         // Configure SDMMC
-        defmt::println!("Configure SDMMC...");
         let sdmmc_detect_pin = gpioa.pa3.into_pull_up_input(&mut gpioa.crl);
         let sdmmc_cs_pin = gpioa.pa4.into_push_pull_output(&mut gpioa.crl);
         let sdmmc_mosi_pin = gpioa.pa7.into_alternate_push_pull(&mut gpioa.crl);
@@ -148,14 +144,15 @@ mod app {
 
         let card = sdmmc::Card::from(embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin));
 
+        // Create adapter
+        let adapter = adapter::Device::new(input, output);
+
         // Indicate adapter startup
-        // defmt::println!("Indicate adapter setup");
         // indicators.all_on();
-        // cortex_m::asm::delay(72_000_000 * 2);
+        // cortex_m::asm::delay(72_000_000);
         // indicators.all_off();
 
         // Enable SM2M bus interrupt
-        defmt::println!("Enable SM2M interrupt");
         let mut dtli = gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // DTLI
         dtli.make_interrupt_source(&mut afio);
         dtli.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
@@ -166,10 +163,8 @@ mod app {
         (
             Shared {},
             Local {
-                // mode: Mode::Ready,
+                adapter,
                 card,
-                input,
-                output,
                 dtli,
                 sdmmc_detect_pin,
                 indicators,
@@ -186,22 +181,15 @@ mod app {
         }
     }
 
-    // use crate::tasks::*;
-
-    // extern "Rust" {
     #[task(binds = EXTI15_10, local = [
-            // mode,
+            adapter,
             card,
-            input,
-            output,
             dtli,
             sdmmc_detect_pin,
             indicators,
         ])]
     fn dtli(cx: dtli::Context) {
-        defmt::println!("Received data from SM2M, Reply ACK");
-        cx.local.output.write(sm2m::output::Frame::Ack);
+        cx.local.adapter.run();
         cx.local.dtli.clear_interrupt_pending_bit();
     }
-    // }
 }

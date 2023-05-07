@@ -72,17 +72,16 @@ impl Bus {
     pub fn new(pins: Pins) -> Self {
         let peripherals = unsafe { device::Peripherals::steal() };
 
-        Self {
+        let mut bus = Self {
             pins,
             gpioa: peripherals.GPIOA,
             gpiob: peripherals.GPIOB,
             gpioc: peripherals.GPIOC,
             gpiod: peripherals.GPIOD,
-        }
-    }
+        };
 
-    pub fn test(&mut self) {
-        self.write_ack();
+        bus.write_ack(); // Set default bus state.
+        bus
     }
 
     pub fn write(&mut self, frame: Frame) {
