@@ -513,6 +513,10 @@
     [
       "99c72709-3b9e-4c7e-b8c6-478bb64985a0",
       "MCU"
+    ],
+    [
+      "183bd171-3314-47db-bc2e-3f4d9616d2d3",
+      "Power"
     ]
   ],
   "text_variables": {}
