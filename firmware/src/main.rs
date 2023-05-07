@@ -1,22 +1,16 @@
 #![no_std]
 #![no_main]
 
-extern crate alloc;
-
 use defmt_rtt as _;
 use panic_probe as _;
 
 mod error;
-mod mode;
+// mod mode;
 mod peripherals;
-mod tasks;
-
-#[global_allocator]
-static HEAP: embedded_alloc::Heap = embedded_alloc::Heap::empty();
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER, PVD, CAN_RX1, CAN_SCE])]
 mod app {
-    use crate::mode::Mode;
+    // use crate::mode::Mode;
     use crate::peripherals::*;
 
     use stm32f1xx_hal::{
@@ -30,26 +24,19 @@ mod app {
 
     #[local]
     struct Local {
-        mode: Mode,
+        // mode: Mode,
         card: sdmmc::Card,
-        bus: sm2m::Bus,
-        trigger: gpio::PB13<gpio::Input<gpio::PullDown>>,
+        input: sm2m::input::Bus,
+        output: sm2m::output::Bus,
+        dtli: gpio::PB13<gpio::Input<gpio::PullDown>>,
         sdmmc_detect_pin: gpio::PA3<gpio::Input<gpio::PullUp>>,
         indicators: Indicators,
     }
 
     #[init]
     fn init(mut cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        {
-            defmt::info!("Create heap...");
-            use core::mem::MaybeUninit;
-            const HEAP_SIZE: usize = 1024 * 16;
-            static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
-            unsafe { super::HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
-        }
-
         // Configure MCU
-        defmt::info!("Configure MCU...");
+        defmt::println!("Configure MCU...");
         let mut afio = cx.device.AFIO.constrain();
         let mut flash = cx.device.FLASH.constrain();
         let rcc = cx.device.RCC.constrain();
@@ -62,7 +49,7 @@ mod app {
             .freeze(&mut flash.acr);
 
         // Configure GPIO
-        defmt::info!("Configure GPIO...");
+        defmt::println!("Configure GPIO...");
         let mut gpioa = cx.device.GPIOA.split();
         let mut gpiob = cx.device.GPIOB.split();
         let mut gpioc = cx.device.GPIOC.split();
@@ -70,84 +57,64 @@ mod app {
         let mut gpioe = cx.device.GPIOE.split();
 
         // Disable JTAG
-        let (pa15, _, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
+        let (pa15, _pb3, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
 
-        // Configure SM2M bus
-        let sm2m_gpioa_config = sm2m::GPIOAConfig {
-            pa8: gpioa.pa8,
-            pa9: gpioa.pa9,
-            pa10: gpioa.pa10,
-            pa11: gpioa.pa11,
-            pa12: gpioa.pa12,
-            pa15,
-            crh: &mut gpioa.crh,
+        // Configure SM2M input bus
+        let pins = sm2m::input::Pins {
+            di_0: gpiob.pb7.into_pull_down_input(&mut gpiob.crl),
+            di_1: gpioe.pe1.into_pull_down_input(&mut gpioe.crl),
+            di_2: gpioe.pe0.into_pull_down_input(&mut gpioe.crl),
+            di_3: gpioe.pe2.into_pull_down_input(&mut gpioe.crl),
+            di_4: gpioe.pe3.into_pull_down_input(&mut gpioe.crl),
+            di_5: gpioe.pe5.into_pull_down_input(&mut gpioe.crl),
+            di_6: gpioe.pe4.into_pull_down_input(&mut gpioe.crl),
+            di_7: gpioe.pe6.into_pull_down_input(&mut gpioe.crl),
+            di_8: pb4.into_pull_down_input(&mut gpiob.crl),
+            di_9: gpiod.pd6.into_pull_down_input(&mut gpiod.crl),
+            di_10: gpiod.pd5.into_pull_down_input(&mut gpiod.crl),
+            di_11: gpiod.pd7.into_pull_down_input(&mut gpiod.crl),
+            di_12: gpiod.pd4.into_pull_down_input(&mut gpiod.crl),
+            di_13: gpiod.pd1.into_pull_down_input(&mut gpiod.crl),
+            di_14: gpiod.pd3.into_pull_down_input(&mut gpiod.crl),
+            di_15: gpiod.pd0.into_pull_down_input(&mut gpiod.crl),
+            ctrli_0: gpiod.pd2.into_pull_down_input(&mut gpiod.crl),
+            ctrli_1: gpiob.pb8.into_pull_down_input(&mut gpiob.crh),
+            rsti: gpiob.pb9.into_pull_down_input(&mut gpiob.crh),
+            dtsi: gpiob.pb6.into_pull_down_input(&mut gpiob.crl),
+            dtei: gpiob.pb14.into_pull_down_input(&mut gpiob.crh),
         };
 
-        let sm2m_gpiob_config = sm2m::GPIOBConfig {
-            pb4,
-            pb6: gpiob.pb6,
-            pb7: gpiob.pb7,
-            pb8: gpiob.pb8,
-            pb9: gpiob.pb9,
-            pb12: gpiob.pb12,
-            pb14: gpiob.pb14,
-            pb15: gpiob.pb15,
-            crl: &mut gpiob.crl,
-            crh: &mut gpiob.crh,
+        let input = sm2m::input::Bus::new(pins);
+
+        // Configure SM2M output bus
+        let pins = sm2m::output::Pins {
+            do_0: gpioc.pc10.into_push_pull_output(&mut gpioc.crh),
+            do_1: gpioa.pa12.into_push_pull_output(&mut gpioa.crh),
+            do_2: gpioa.pa10.into_push_pull_output(&mut gpioa.crh),
+            do_3: gpioa.pa8.into_push_pull_output(&mut gpioa.crh),
+            do_4: gpioc.pc9.into_push_pull_output(&mut gpioc.crh),
+            do_5: gpioc.pc8.into_push_pull_output(&mut gpioc.crh),
+            do_6: gpioc.pc7.into_push_pull_output(&mut gpioc.crl),
+            do_7: gpiod.pd15.into_push_pull_output(&mut gpiod.crh),
+            do_8: gpiod.pd14.into_push_pull_output(&mut gpiod.crh),
+            do_9: gpioc.pc6.into_push_pull_output(&mut gpioc.crl),
+            do_10: gpiod.pd13.into_push_pull_output(&mut gpiod.crh),
+            do_11: gpiod.pd8.into_push_pull_output(&mut gpiod.crh),
+            do_12: gpiod.pd11.into_push_pull_output(&mut gpiod.crh),
+            do_13: gpiod.pd12.into_push_pull_output(&mut gpiod.crh),
+            do_14: gpiob.pb15.into_push_pull_output(&mut gpiob.crh),
+            do_15: gpiod.pd9.into_push_pull_output(&mut gpiod.crh),
+            ctrlo_0: gpioa.pa11.into_push_pull_output(&mut gpioa.crh),
+            ctrlo_1: gpioa.pa9.into_push_pull_output(&mut gpioa.crh),
+            rdy: gpiod.pd10.into_push_pull_output(&mut gpiod.crh),
+            ctrl_d: gpioc.pc12.into_push_pull_output(&mut gpioc.crh),
+            erro: pa15.into_push_pull_output(&mut gpioa.crh),
+            rste: gpiob.pb12.into_push_pull_output(&mut gpiob.crh),
+            sete: gpioc.pc3.into_push_pull_output(&mut gpioc.crl),
+            dteo: gpioc.pc11.into_push_pull_output(&mut gpioc.crh),
         };
 
-        let sm2m_gpioc_config = sm2m::GPIOCConfig {
-            pc3: gpioc.pc3,
-            pc6: gpioc.pc6,
-            pc7: gpioc.pc7,
-            pc8: gpioc.pc8,
-            pc9: gpioc.pc9,
-            pc10: gpioc.pc10,
-            pc11: gpioc.pc11,
-            pc12: gpioc.pc12,
-            crl: &mut gpioc.crl,
-            crh: &mut gpioc.crh,
-        };
-
-        let sm2m_gpiod_config = sm2m::GPIODConfig {
-            pd0: gpiod.pd0,
-            pd1: gpiod.pd1,
-            pd2: gpiod.pd2,
-            pd3: gpiod.pd3,
-            pd4: gpiod.pd4,
-            pd5: gpiod.pd5,
-            pd6: gpiod.pd6,
-            pd7: gpiod.pd7,
-            pd8: gpiod.pd8,
-            pd9: gpiod.pd9,
-            pd10: gpiod.pd10,
-            pd11: gpiod.pd11,
-            pd12: gpiod.pd12,
-            pd13: gpiod.pd13,
-            pd14: gpiod.pd14,
-            pd15: gpiod.pd15,
-            crl: &mut gpiod.crl,
-            crh: &mut gpiod.crh,
-        };
-
-        let sm2m_gpioe_config = sm2m::GPIOEConfig {
-            pe0: gpioe.pe0,
-            pe1: gpioe.pe1,
-            pe2: gpioe.pe2,
-            pe3: gpioe.pe3,
-            pe4: gpioe.pe4,
-            pe5: gpioe.pe5,
-            pe6: gpioe.pe6,
-            crl: &mut gpioe.crl,
-        };
-
-        let bus = sm2m::Bus::configure(
-            sm2m_gpioa_config,
-            sm2m_gpiob_config,
-            sm2m_gpioc_config,
-            sm2m_gpiod_config,
-            sm2m_gpioe_config,
-        );
+        let output = sm2m::output::Bus::new(pins);
 
         // Configure LED indicators
         defmt::info!("Configure LED indicators...");
@@ -161,7 +128,7 @@ mod app {
         let mut indicators = Indicators::configure(indicator_pins);
 
         // Configure SDMMC
-        defmt::info!("Configure SDMMC...");
+        defmt::println!("Configure SDMMC...");
         let sdmmc_detect_pin = gpioa.pa3.into_pull_up_input(&mut gpioa.crl);
         let sdmmc_cs_pin = gpioa.pa4.into_push_pull_output(&mut gpioa.crl);
         let sdmmc_mosi_pin = gpioa.pa7.into_alternate_push_pull(&mut gpioa.crl);
@@ -182,27 +149,28 @@ mod app {
         let card = sdmmc::Card::from(embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin));
 
         // Indicate adapter startup
-        defmt::info!("Indicate adapter setup");
-        indicators.all_on();
-        cortex_m::asm::delay(72_000_000 * 2);
-        indicators.all_off();
+        // defmt::println!("Indicate adapter setup");
+        // indicators.all_on();
+        // cortex_m::asm::delay(72_000_000 * 2);
+        // indicators.all_off();
 
         // Enable SM2M bus interrupt
-        defmt::info!("Enable SM2M interrupt");
-        let mut trigger = gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // DTLI
-        trigger.make_interrupt_source(&mut afio);
-        trigger.enable_interrupt(&mut cx.device.EXTI);
-        trigger.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
+        defmt::println!("Enable SM2M interrupt");
+        let mut dtli = gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // DTLI
+        dtli.make_interrupt_source(&mut afio);
+        dtli.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
+        dtli.enable_interrupt(&mut cx.device.EXTI);
 
-        defmt::info!("Run");
+        defmt::println!("Ready");
 
         (
             Shared {},
             Local {
-                mode: Mode::Ready,
+                // mode: Mode::Ready,
                 card,
-                bus,
-                trigger,
+                input,
+                output,
+                dtli,
                 sdmmc_detect_pin,
                 indicators,
             },
@@ -218,17 +186,22 @@ mod app {
         }
     }
 
-    use crate::tasks::*;
+    // use crate::tasks::*;
 
-    extern "Rust" {
-        #[task(binds = EXTI0, local = [
-            mode,
+    // extern "Rust" {
+    #[task(binds = EXTI15_10, local = [
+            // mode,
             card,
-            bus,
-            trigger,
+            input,
+            output,
+            dtli,
             sdmmc_detect_pin,
             indicators,
         ])]
-        fn command(_: command::Context);
+    fn dtli(cx: dtli::Context) {
+        defmt::println!("Received data from SM2M, Reply ACK");
+        cx.local.output.write(sm2m::output::Frame::Ack);
+        cx.local.dtli.clear_interrupt_pending_bit();
     }
+    // }
 }

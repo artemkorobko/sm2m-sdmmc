@@ -21,10 +21,10 @@ where
     RL: OutputPin,
     D: InputPin,
 {
-    match sm2m::Command::from(input)? {
-        sm2m::Command::CheckStatus => check_status(sdmmc_detect),
-        sm2m::Command::Reset => reset(err_led, write_led, read_led),
-        sm2m::Command::Address(addr) => address(addr),
+    match sm2m::Frame::from(input)? {
+        sm2m::Frame::CheckStatus => check_status(sdmmc_detect),
+        sm2m::Frame::Reset => reset(err_led, write_led, read_led),
+        sm2m::Frame::Address(addr) => address(addr),
         _ => Err(AppError::UnhandledCommand),
     }
 }

@@ -20,9 +20,9 @@ where
     W: OutputPin,
     R: OutputPin,
 {
-    match sm2m::Command::from(input)? {
-        sm2m::Command::Write => write(write_led, card, file_name),
-        sm2m::Command::Read => read(read_led, card, file_name),
+    match sm2m::Frame::from(input)? {
+        sm2m::Frame::Write => write(write_led, card, file_name),
+        sm2m::Frame::Read => read(read_led, card, file_name),
         _ => Err(AppError::UnhandledCommand),
     }
 }

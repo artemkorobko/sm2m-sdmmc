@@ -1,157 +1,146 @@
-use stm32f1xx_hal::device::{Peripherals, GPIOA, GPIOB, GPIOC, GPIOD};
+use stm32f1xx_hal::{device, gpio};
 
-#[derive(Default)]
-pub struct Output {
-    data: u16,
-    ctrlo_0: bool,
-    ctrlo_1: bool,
-    rste: bool,
-    ctrld: bool,
-    err: bool,
-    dteo: bool,
-    rdy: bool,
-    sete: bool,
+macro_rules! port_write {
+    ($GPIO:expr, $CLR_MASK:expr, $BIT_MASK:expr) => {
+        // let gpio = stringify!($GPIO);
+        $GPIO.odr.modify(|r, w| {
+            let mut bits = r.bits(); // read bits
+            // defmt::println!(
+            //     "{} bits {:#034b}, clr_mask: {:#034b}, bit_mask: {:#034b}",
+            //     gpio,
+            //     bits,
+            //     $CLR_MASK,
+            //     $BIT_MASK
+            // );
+            bits &= $CLR_MASK; // clear bits before applying mask
+            bits |= $BIT_MASK & ($CLR_MASK ^ 0xFFFF); // apply mask
+            // defmt::println!("{} result {:#034b}", gpio, bits);
+            unsafe { w.bits(bits) } // write bits
+        });
+    };
 }
 
-impl Output {
-    pub fn ok() -> Self {
-        Output {
-            rdy: true,
-            ..Default::default()
-        }
-    }
+pub type Pin<const P: char, const N: u8> = gpio::Pin<P, N, gpio::Output<gpio::PushPull>>;
 
-    pub fn error() -> Self {
-        Output {
-            err: true,
-            ..Default::default()
-        }
-    }
-
-    pub fn data(data: u16) -> Self {
-        Output {
-            data,
-            rdy: true,
-            ..Default::default()
-        }
-    }
+pub enum Frame {
+    Ack,
+    Error(u16),
+    Data(u16),
 }
 
-pub trait Write {
-    unsafe fn write(&mut self, output: &Output);
+pub struct Pins {
+    pub do_0: Pin<'C', 10>,
+    pub do_1: Pin<'A', 12>,
+    pub do_2: Pin<'A', 10>,
+    pub do_3: Pin<'A', 8>,
+    pub do_4: Pin<'C', 9>,
+    pub do_5: Pin<'C', 8>,
+    pub do_6: Pin<'C', 7>,
+    pub do_7: Pin<'D', 15>,
+    pub do_8: Pin<'D', 14>,
+    pub do_9: Pin<'C', 6>,
+    pub do_10: Pin<'D', 13>,
+    pub do_11: Pin<'D', 8>,
+    pub do_12: Pin<'D', 11>,
+    pub do_13: Pin<'D', 12>,
+    pub do_14: Pin<'B', 15>,
+    pub do_15: Pin<'D', 9>,
+    pub ctrlo_0: Pin<'A', 11>,
+    pub ctrlo_1: Pin<'A', 9>,
+    pub rdy: Pin<'D', 10>,
+    pub ctrl_d: Pin<'C', 12>,
+    pub erro: Pin<'A', 15>,
+    pub rste: Pin<'B', 12>,
+    pub sete: Pin<'C', 3>,
+    pub dteo: Pin<'C', 11>,
 }
 
-pub struct OutputBus {
-    gpioa: GPIOA,
-    gpiob: GPIOB,
-    gpioc: GPIOC,
-    gpiod: GPIOD,
+pub struct Bus {
+    pins: Pins,
+    gpioa: device::GPIOA,
+    gpiob: device::GPIOB,
+    gpioc: device::GPIOC,
+    gpiod: device::GPIOD,
 }
 
-impl OutputBus {
-    pub unsafe fn steal() -> Self {
-        let peripherals = Peripherals::steal();
+const GPIOA_MASK: u32 = 0b0110000011111111;
+const GPIOB_MASK: u32 = 0b0110111111111111;
+const GPIOC_MASK: u32 = 0b1110000000110111;
+const GPIOD_MASK: u32 = 0b0000010011111111;
+
+impl Bus {
+    pub fn new(pins: Pins) -> Self {
+        let peripherals = unsafe { device::Peripherals::steal() };
 
         Self {
+            pins,
             gpioa: peripherals.GPIOA,
             gpiob: peripherals.GPIOB,
             gpioc: peripherals.GPIOC,
             gpiod: peripherals.GPIOD,
         }
     }
-}
 
-impl Write for OutputBus {
-    unsafe fn write(&mut self, output: &Output) {
-        fn write_bit(to: u32, dst: u32, from: u32, src: u32) -> u32 {
-            let bit = (from >> src) & 1;
-            let clean = to & !(1 << dst);
-            clean | (bit << dst)
-        }
-
-        fn write_flag(to: u32, dst: u32, flag: bool) -> u32 {
-            let clean = to & !(1 << dst);
-            clean | flag as u32
-        }
-
-        let data = output.data as u32;
-
-        self.gpioa.odr.modify(|r, w| {
-            let mut bits = r.bits();
-            bits = write_bit(bits, 8, data, 3); // pa8 - DO_3
-            bits = write_flag(bits, 9, output.ctrlo_1); // pa9 - CTRLO_1
-            bits = write_bit(bits, 10, data, 2); // pa10 - DO_2
-            bits = write_flag(bits, 11, output.ctrlo_0); // pa11 - CTRLO_0
-            bits = write_bit(bits, 12, data, 1); // pa12 - DO_1
-            bits = write_flag(bits, 15, output.err); // pa15 - ERR
-            w.bits(bits)
-        });
-
-        self.gpiob.odr.modify(|r, w| {
-            let mut bits = r.bits();
-            bits = write_flag(bits, 12, output.rste); // pb12 - RSTE
-            bits = write_bit(bits, 15, data, 14); // pb15 - DO_14
-            w.bits(bits)
-        });
-
-        self.gpioc.odr.modify(|r, w| {
-            let mut bits = r.bits();
-            bits = write_flag(bits, 3, output.sete); // pc3 - SETE
-            bits = write_bit(bits, 6, data, 9); // pc6 - DO_9
-            bits = write_bit(bits, 7, data, 6); // pc7 - DO_6
-            bits = write_bit(bits, 8, data, 5); // pc8 - DO_5
-            bits = write_bit(bits, 9, data, 4); // pc9 - DO_4
-            bits = write_bit(bits, 10, data, 0); // pc10 - DO_0
-            bits = write_flag(bits, 11, output.dteo); // pc11 - DTEO
-            bits = write_flag(bits, 12, output.ctrld); // pc12 - CTRLD
-            w.bits(bits)
-        });
-
-        self.gpiod.odr.modify(|r, w| {
-            let mut bits = r.bits();
-            bits = write_bit(bits, 8, data, 11); // pd8 - DO_11
-            bits = write_bit(bits, 9, data, 15); // pd9 - DO_15
-            bits = write_bit(bits, 11, data, 12); // pd11 - DO_12
-            bits = write_bit(bits, 12, data, 13); // pd12 - DO_13
-            bits = write_bit(bits, 13, data, 10); // pd13 - DO_10
-            bits = write_bit(bits, 14, data, 8); // pd14 - DO_8
-            bits = write_bit(bits, 15, data, 7); // pd15 - DO_7
-            w.bits(bits)
-        });
-
-        // Notify SM2M with a delay after setting data to all lines.
-        // At the time of writing RDY to the bus all lines should alreday be
-        // set to corresponding states.
-        self.gpiod.odr.modify(|r, w| {
-            let mut bits = r.bits();
-            bits = write_flag(bits, 10, output.rdy); // pd10 - RDY
-            w.bits(bits)
-        });
+    pub fn test(&mut self) {
+        self.write_ack();
     }
-}
 
-pub struct InvertedOutputBus(OutputBus);
-
-impl From<OutputBus> for InvertedOutputBus {
-    fn from(value: OutputBus) -> Self {
-        Self(value)
+    pub fn write(&mut self, frame: Frame) {
+        // Assume that all signal pins CTRLO_0, CTRLO_1, RDY,
+        // CTRL_D, ERRO, RSTE, SETE, DTEO, are set to 1 during write.
+        match frame {
+            Frame::Ack => {
+                self.write_ack();
+                self.pins.rdy.set_low();
+            }
+            Frame::Error(opcode) => {
+                self.write_data(opcode);
+                self.pins.erro.set_low();
+            }
+            Frame::Data(data) => {
+                self.write_data(data);
+                self.pins.rdy.set_low();
+            }
+        }
     }
-}
 
-impl Write for InvertedOutputBus {
-    unsafe fn write(&mut self, output: &Output) {
-        let inverted = Output {
-            data: !output.data,
-            rste: !output.rste,
-            ctrld: !output.ctrld,
-            ctrlo_0: !output.ctrlo_0,
-            ctrlo_1: !output.ctrlo_1,
-            err: !output.err,
-            dteo: !output.dteo,
-            rdy: !output.rdy,
-            sete: !output.sete,
-        };
+    fn write_ack(&mut self) {
+        port_write!(self.gpioa, GPIOA_MASK, u32::MAX); // Write 1 to pin 8, 9, 10, 11, 12, 15
+        port_write!(self.gpiob, GPIOB_MASK, u32::MAX); // Write 1 to pin 12, 15
+        port_write!(self.gpioc, GPIOC_MASK, u32::MAX); // Write 1 to pin 3, 6, 7, 8, 9, 10, 11, 12
+        port_write!(self.gpiod, GPIOD_MASK, u32::MAX); // Write 1 to pin 8, 9, 10, 11, 12, 13, 14, 15
+    }
 
-        self.0.write(&inverted)
+    fn write_data(&self, data: u16) {
+        let data = data as u32 ^ u32::MAX; // Flip bits to convert between logic levels
+
+        let mut pa = 0b1000101000000000; // CTRLO_1 (PA9), CTRLO_0 (PA11) and ERRO (A15) are set to 1
+        pa |= (data & (1 << 1)) << 11; // Write data bit 1 to PA12
+        pa |= (data & (1 << 2)) << 8; // Write data bit 2 to PA10
+        pa |= (data & (1 << 3)) << 5; // Write data bit 3 to PA8
+
+        let mut pb = 0b0001000000000000; // RSTE (PB12) is set to 1
+        pb |= (data & (1 << 14)) << 1; // Write data bit 14 to PB15
+
+        let mut pc = 0b0001100000001000; // SETE (PC3), DTEO (PC11) and CTRL_D (PC12) are set to 1
+        pc |= (data & 1) << 10; // Write data bit 0 to PC10
+        pc |= (data & (1 << 4)) << 5; // Write data bit 4 to PC9
+        pc |= (data & (1 << 5)) << 3; // Write data bit 5 to PC8
+        pc |= (data & (1 << 6)) << 1; // Write data bit 6 to PC7
+        pc |= (data & (1 << 9)) >> 3; // Write data bit 9 to PC6
+
+        let mut pd = 0b0000010000000000; // RDY (PD10) is set to 1
+        pc |= (data & (1 << 7)) << 8; // Write data bit 7 to PD15
+        pd |= (data & (1 << 8)) << 6; // Write data bit 8 to PD14
+        pd |= (data & (1 << 10)) << 3; // Write data bit 10 to PD13
+        pd |= (data & (1 << 11)) >> 3; // Write data bit 11 to PD8
+        pd |= (data & (1 << 12)) >> 1; // Write data bit 12 to PD11
+        pd |= (data & (1 << 13)) >> 1; // Write data bit 13 to PD12
+        pd |= (data & (1 << 15)) >> 6; // Write data bit 15 to PD9
+
+        port_write!(self.gpioa, GPIOA_MASK, pa);
+        port_write!(self.gpiob, GPIOB_MASK, pb);
+        port_write!(self.gpioc, GPIOC_MASK, pc);
+        port_write!(self.gpiod, GPIOD_MASK, pd);
     }
 }
