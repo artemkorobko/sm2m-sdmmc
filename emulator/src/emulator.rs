@@ -11,18 +11,18 @@ macro_rules! log {
 }
 
 enum Mode {
-    Read,
     Write,
+    Read,
 }
 
 enum State {
     Ready,
-    ResetSent,
-    CheckStatusSent,
-    AddressSent,
-    ReadSent(u16),
-    WriteSent(u16),
-    StopSent,
+    Reset,
+    CheckStatus,
+    Address,
+    Read(u16),
+    Write(u16),
+    Stop,
 }
 
 pub type LedPin = gpio::Pin<'D', 7, gpio::Output>;
@@ -68,8 +68,8 @@ impl Machine {
 
     pub fn stop(&mut self) {
         log!(self.debug, "Send STOP");
-        self.state = State::StopSent;
-        self.output.write_reversed(output::Frame::Stop);
+        self.state = State::Stop;
+        self.output.write(output::Frame::Stop);
     }
 
     fn start(&mut self) {
@@ -81,77 +81,80 @@ impl Machine {
     fn process_state(&mut self) {
         match self.state {
             State::Ready => {
-                log!(self.debug, "Send RESET: {}", self.debug);
-                self.state = State::ResetSent;
-                self.output.write_reversed(output::Frame::Reset);
+                log!(self.debug, "Send RESET");
+                self.state = State::Reset;
+                self.output.write(output::Frame::Reset);
             }
-            State::ResetSent => {
+            State::Reset => {
                 if let Some(_) = self.read() {
-                    log!(self.debug, "Received READY, send CHECK_STATUS");
-                    self.state = State::CheckStatusSent;
-                    self.output.write_reversed(output::Frame::CheckStatus);
+                    log!(self.debug, "Send CHECK_STATUS");
+                    self.state = State::CheckStatus;
+                    self.output.write(output::Frame::CheckStatus);
                 }
             }
-            State::CheckStatusSent => {
-                if let Some(_) = self.read() {
-                    log!(self.debug, "Received READY, send ADDRESS");
-                    self.state = State::AddressSent;
+            State::CheckStatus => {
+                if self.read().is_some() {
                     self.last_address += 1;
-                    self.output
-                        .write_reversed(output::Frame::Address(self.last_address));
+                    log!(self.debug, "Send ADDRESS: {}", self.last_address);
+                    self.state = State::Address;
+                    self.output.write(output::Frame::Address(self.last_address));
                 }
             }
-            State::AddressSent => {
-                if let Some(_) = self.read() {
+            State::Address => {
+                if self.read().is_some() {
                     match self.mode {
                         Mode::Read => {
-                            log!(self.debug, "Received READY, send READ");
-                            self.state = State::ReadSent(0);
-                            self.output.write_reversed(output::Frame::Read);
+                            log!(self.debug, "Send READ");
+                            self.state = State::Read(0);
+                            self.output.write(output::Frame::Read);
                         }
                         Mode::Write => {
-                            let data = 0;
-                            log!(self.debug, "Received READY, send WRITE: {}", data);
-                            self.state = State::WriteSent(data);
-                            self.output.write_reversed(output::Frame::Write(data));
+                            log!(self.debug, "Send WRITE");
+                            self.state = State::Write(0);
+                            self.output.write(output::Frame::Write);
                         }
                     }
                 }
             }
-            State::ReadSent(count) => {
+            State::Read(count) => {
                 if let Some(data) = self.read() {
-                    log!(self.debug, "Received READY: {}, send READ", data);
-                    self.state = State::ReadSent(count + 1);
-                    self.output.write_reversed(output::Frame::Read);
-                }
-            }
-            State::WriteSent(mut data) => {
-                if let Some(_) = self.read() {
-                    if data < u16::MAX {
-                        data += 1;
-                        log!(self.debug, "Received READY, send WRITE: {}", data);
-                        self.state = State::WriteSent(data);
-                        self.output.write_reversed(output::Frame::Write(data));
+                    if data < 10 {
+                        // First read will receive ACK. Every following read will receive DATA.
+                        log!(self.debug, "Read: {}, send READ_DATA", data);
+                        self.state = State::Read(count + 1);
+                        self.output.write(output::Frame::ReadData);
                     } else {
-                        log!(self.debug, "Received READY, send STOP");
-                        self.state = State::StopSent;
-                        self.output.write_reversed(output::Frame::Stop);
+                        log!(self.debug, "Read: {}, send STOP", data);
+                        self.state = State::Stop;
+                        self.output.write(output::Frame::Stop);
                     }
                 }
             }
-            State::StopSent => {
-                self.read();
-                log!(self.debug, "Emulation completed");
+            State::Write(mut data) => {
+                if self.read().is_some() {
+                    if data < 10 {
+                        data += 1;
+                        log!(self.debug, "Send WRITE_DATA: {}", data);
+                        self.state = State::Write(data);
+                        self.output.write(output::Frame::WriteData(data));
+                    } else {
+                        log!(self.debug, "Send STOP");
+                        self.state = State::Stop;
+                        self.output.write(output::Frame::Stop);
+                    }
+                }
+            }
+            State::Stop => {
+                if self.read().is_some() {
+                    log!(self.debug, "Emulation completed");
+                }
             }
         }
     }
 
     fn read(&mut self) -> Option<u16> {
-        match self.input.read_reversed() {
-            input::Frame::Ack(payload) => {
-                log!(self.debug, "Received ACK: {}", payload);
-                Some(payload)
-            }
+        match self.input.read() {
+            input::Frame::Data(payload) => Some(payload),
             input::Frame::Error(opcode) => {
                 log!(self.debug, "Received ERROR: {}", opcode);
                 self.led.set_low();

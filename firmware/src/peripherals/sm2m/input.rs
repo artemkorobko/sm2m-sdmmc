@@ -2,33 +2,36 @@ use stm32f1xx_hal::{device, gpio};
 
 pub type Pin<const P: char, const N: u8> = gpio::Pin<P, N, gpio::Input<gpio::PullDown>>;
 
-pub enum Frame {
+pub enum Action {
     Reset,
-    // CheckStatus, <- these should be handled based on mode or state
-    // Address(u16),
-    // Read,
-    // Write,
-    EndOfDataTransfer,
-    Payload(u16),
+    End,
+    Data(u16),
 }
 
-// impl Frame {
-//     pub fn from(value: Input) -> Result<Self, AppError> {
-//         if value.data & 0x0F == 0x00 {
-//             Ok(Self::CheckStatus)
-//         } else if value.data & 0x0F == 0x01 {
-//             Ok(Self::Write)
-//         } else if value.data & 0x0F == 0x02 {
-//             Ok(Self::Read)
-//         } else if value.data & 0x0F == 0x03 {
-//             Ok(Self::Address(0xFC00))
-//         } else if value.rst {
-//             Ok(Self::Reset)
-//         } else {
-//             Err(AppError::UnknownCommand)
-//         }
-//     }
-// }
+pub enum Frame {
+    CheckStatus,
+    Address(u16),
+    Write,
+    Read,
+    Data(u16),
+}
+
+impl Frame {
+    pub fn from(payload: u16) -> Self {
+        if payload == 0x0000 {
+            Self::CheckStatus
+        } else if payload == 0x0001 {
+            Self::Write
+        } else if payload == 0x0002 {
+            Self::Read
+        } else if payload & 0x0003 == 0x0003 {
+            // Bits 10..15 contains the actual address
+            Self::Address(payload >> 10)
+        } else {
+            Self::Data(payload)
+        }
+    }
+}
 
 pub struct Pins {
     pub di_0: Pin<'B', 7>,
@@ -74,42 +77,42 @@ impl Bus {
         }
     }
 
-    pub fn read(&self) -> Frame {
+    pub fn read(&self) -> Action {
         // Read port data
         let pb = self.gpiob.idr.read().bits() as u16;
         let pd = self.gpiod.idr.read().bits() as u16;
         let pe = self.gpioe.idr.read().bits() as u16;
 
         // Read control signals
-        let ctrli_0 = pd & (1 << 2) == 0; // Read CTRLI_1 from PD2
-        let ctrli_1 = pb & (1 << 8) == 0; // Read CTRL_1 from PB8
+        // let ctrli_0 = pd & (1 << 2) == 0; // Read CTRLI_0 from PD2
+        // let ctrli_1 = pb & (1 << 8) == 0; // Read CTRLI_1 from PB8
         let rsti = pb & (1 << 9) == 0; // Read RSTI from PB9
         let dtei = pb & (1 << 14) == 0; // Read DTEI from PB14
 
         if rsti {
-            Frame::Reset
+            Action::Reset
         } else if dtei {
-            Frame::EndOfDataTransfer
+            Action::End
         } else {
             // Read data line
-            let mut data = (pb >> 7) & 1; // Read data bit 0 from PB7.
-            data |= pe & (1 << 1); // Read data bit 1 from PE1
-            data |= (pe & 1) << 2; // Read data bit 2 from PE0
-            data |= (pe & (1 << 2)) << 1; // Read data bit 3 from PE2
-            data |= (pe & (1 << 3)) << 1; // Read data bit 4 from PE3
-            data |= pe & (1 << 5); // Read data bit 5 from PE5
-            data |= (pe & (1 << 4)) << 2; // Read data bit 6 from PE4
-            data |= (pe & (1 << 6)) << 1; // Read data bit 7 from PE6
-            data |= (pb & (1 << 4)) << 4; // Read data bit 8 from PB4
-            data |= (pd & (1 << 6)) << 3; // Read data bit 9 from PD6
-            data |= (pd & (1 << 5)) << 5; // Read data bit 10 from PD5
-            data |= (pd & (1 << 7)) << 4; // Read data bit 11 from PD7
-            data |= (pd & (1 << 4)) << 8; // Read data bit 12 from PD4
-            data |= (pd & (1 << 1)) << 12; // Read data bit 13 from PD1
-            data |= (pd & (1 << 3)) << 11; // Read data bit 14 from PD3
-            data |= (pd & 1) << 15; // Read data bit 15 from PD0
-            data ^= u16::MAX; // Flip bits to convert from logical level 0 to 1
-            Frame::Payload(data)
+            let mut payload = (pb >> 7) & 1; // Read data bit 0 from PB7.
+            payload |= pe & (1 << 1); // Read data bit 1 from PE1
+            payload |= (pe & 1) << 2; // Read data bit 2 from PE0
+            payload |= (pe & (1 << 2)) << 1; // Read data bit 3 from PE2
+            payload |= (pe & (1 << 3)) << 1; // Read data bit 4 from PE3
+            payload |= pe & (1 << 5); // Read data bit 5 from PE5
+            payload |= (pe & (1 << 4)) << 2; // Read data bit 6 from PE4
+            payload |= (pe & (1 << 6)) << 1; // Read data bit 7 from PE6
+            payload |= (pb & (1 << 4)) << 4; // Read data bit 8 from PB4
+            payload |= (pd & (1 << 6)) << 3; // Read data bit 9 from PD6
+            payload |= (pd & (1 << 5)) << 5; // Read data bit 10 from PD5
+            payload |= (pd & (1 << 7)) << 4; // Read data bit 11 from PD7
+            payload |= (pd & (1 << 4)) << 8; // Read data bit 12 from PD4
+            payload |= (pd & (1 << 1)) << 12; // Read data bit 13 from PD1
+            payload |= (pd & (1 << 3)) << 11; // Read data bit 14 from PD3
+            payload |= (pd & 1) << 15; // Read data bit 15 from PD0
+            payload ^= u16::MAX; // Flip bits to convert from logical level 0 to 1
+            Action::Data(payload)
         }
     }
 }

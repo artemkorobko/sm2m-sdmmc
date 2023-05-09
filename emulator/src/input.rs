@@ -3,7 +3,7 @@ use stm32f1xx_hal::{device, gpio};
 pub type Pin<const P: char, const N: u8> = gpio::Pin<P, N, gpio::Input<gpio::PullDown>>;
 
 pub enum Frame {
-    Ack(u16),
+    Data(u16),
     Error(u16),
     Set,
     Reset,
@@ -61,11 +61,6 @@ impl Bus {
 
     pub fn read(&self) -> Frame {
         let mask = self.read_mask();
-        Frame::from(mask)
-    }
-
-    pub fn read_reversed(&self) -> Frame {
-        let mask = self.read_mask();
         Frame::from(mask.reverse_bits())
     }
 
@@ -106,27 +101,15 @@ impl From<DataMask> for Frame {
         let sete = (value.gpioe >> 13) & 1 == 1; // read SETE from PE13
         let rste = (value.gpioe >> 14) & 1 == 1; // read RSTE from PE14
         let erro = (1 << 15) & value.gpioe != 0; // read ERRO from PE15
-        let ctrld = (value.gpiob >> 10) & 1 == 1; // read CTRDL from BP10
-        let ctrlo_1 = (value.gpiob >> 14) & 1 == 1; // read CTRLO_1 from BP14
-        let ctrlo_0 = (value.gpiob >> 15) & 1 == 1; // read CTRLO_0 from BP15
+                                                 // let ctrld = (value.gpiob >> 10) & 1 == 1; // read CTRDL from BP10
+                                                 // let ctrlo_1 = (value.gpiob >> 14) & 1 == 1; // read CTRLO_1 from BP14
+                                                 // let ctrlo_0 = (value.gpiob >> 15) & 1 == 1; // read CTRLO_0 from BP15
 
         let mut data = value.gpiob & 0b1111111; // read bits 0..6 from PD[0..6]
         data |= (value.gpioe & 0b100000000000) >> 4; // read bit 7 from PE11
         data |= value.gpioa & 0b100000000; // read bit 8 from PA8
         data |= (value.gpioc & 0b11000000) << 3; // read bit 9..10 from PC[6..7]
         data |= (value.gpiod & 0b1111100000000000) << 3; // read bit 11..15 from PD[11..15]
-
-        // defmt::println!(
-        //     "dteo: {}, sete: {}, rste: {}, erro: {}, ctrld: {}, ctrlo_1: {}, ctrlo_0: {}",
-        //     dteo,
-        //     sete,
-        //     rste,
-        //     erro,
-        //     ctrld,
-        //     ctrlo_1,
-        //     ctrlo_0,
-        // );
-        // defmt::println!("Data: {}", data);
 
         if erro {
             Self::Error(data)
@@ -137,7 +120,7 @@ impl From<DataMask> for Frame {
         } else if dteo {
             Self::End
         } else {
-            Self::Ack(data)
+            Self::Data(data)
         }
     }
 }

@@ -4,19 +4,10 @@ pub type Pin<const P: char, const N: u8> = gpio::Pin<P, N, gpio::Output<gpio::Pu
 
 macro_rules! port_write {
     ($GPIO:expr, $CLR_MASK:expr, $BIT_MASK:expr) => {
-        // let gpio = stringify!($GPIO);
         $GPIO.odr.modify(|r, w| {
             let mut bits = r.bits(); // read bits
-            // defmt::println!(
-            //     "{} bits {:#034b}, clr_mask: {:#034b}, bit_mask: {:#034b}",
-            //     gpio,
-            //     bits,
-            //     $CLR_MASK,
-            //     $BIT_MASK
-            // );
             bits &= $CLR_MASK; // clear bits before applying mask
             bits |= $BIT_MASK & ($CLR_MASK ^ 0xFFFF); // apply mask
-            // defmt::println!("{} result {:#034b}", gpio, bits);
             unsafe { w.bits(bits) } // write bits
         });
     };
@@ -26,8 +17,10 @@ pub enum Frame {
     Reset,
     CheckStatus,
     Address(u16),
-    Write(u16),
+    Write,
     Read,
+    WriteData(u16),
+    ReadData,
     Stop,
 }
 
@@ -81,13 +74,6 @@ impl Bus {
     }
 
     pub fn write(&mut self, frame: Frame) {
-        let mask = DataMask::from(frame);
-        self.pins.dtli.set_low();
-        self.write_mask(mask);
-        self.pins.dtli.set_high();
-    }
-
-    pub fn write_reversed(&mut self, frame: Frame) {
         let mask = DataMask::from(frame);
         self.pins.dtli.set_high();
         self.write_mask(mask.reverse_bits());
@@ -143,33 +129,45 @@ impl From<Frame> for DataMask {
                     gpioe: (addr & (1 << 0)) << 6, // set address bit 0 to pe6
                 }
             }
-            Frame::Write(data) => {
-                let mut gpiob = (data & (1 << 0)) << 4; // set data bit 0 to pb4
-                gpiob |= (data & (1 << 1)) << 4; // set data bit 1 to pb5
-                gpiob |= (data & (1 << 2)) << 4; // set data bit 2 to pb6
-                gpiob |= (data & (1 << 3)) << 4; // set data bit 3 to pb7
-                gpiob |= (data & (1 << 4)) << 4; // set data bit 4 to pb8
-                gpiob |= (data & (1 << 5)) << 4; // set data bit 5 to pb9
+            Frame::Write => Self {
+                gpioa: 0,
+                gpiob: 1 << 4, // set data bit 0 to 1 to pb4
+                gpioc: 0,
+                gpioe: 0,
+            },
+            Frame::WriteData(payload) => {
+                let mut gpiob = (payload & (1 << 0)) << 4; // set data bit 0 to pb4
+                gpiob |= (payload & (1 << 1)) << 4; // set data bit 1 to pb5
+                gpiob |= (payload & (1 << 2)) << 4; // set data bit 2 to pb6
+                gpiob |= (payload & (1 << 3)) << 4; // set data bit 3 to pb7
+                gpiob |= (payload & (1 << 4)) << 4; // set data bit 4 to pb8
+                gpiob |= (payload & (1 << 5)) << 4; // set data bit 5 to pb9
 
-                let mut gpioc = (data & (1 << 11)) << 2; // set data bit 11 to pc13
-                gpioc |= (data & (1 << 12)) >> 12; // set data bit 12 to pc0
-                gpioc |= (data & (1 << 13)) >> 11; // set data bit 13 to pc2
-                gpioc |= (data & (1 << 14)) >> 11; // set data bit 14 to pc3
+                let mut gpioc = (payload & (1 << 11)) << 2; // set data bit 11 to pc13
+                gpioc |= (payload & (1 << 12)) >> 12; // set data bit 12 to pc0
+                gpioc |= (payload & (1 << 13)) >> 11; // set data bit 13 to pc2
+                gpioc |= (payload & (1 << 14)) >> 11; // set data bit 14 to pc3
 
-                let mut gpioe = (data & (1 << 6)) >> 4; // set data bit 6 to pe2
-                gpioe |= (data & (1 << 7)) >> 4; // set data bit 7 to pe3
-                gpioe |= (data & (1 << 8)) >> 4; // set data bit 8 to pe4
-                gpioe |= (data & (1 << 9)) >> 4; // set data bit 9 to pe5
-                gpioe |= (data & (1 << 10)) >> 4; // set data bit 10 to pe6
+                let mut gpioe = (payload & (1 << 6)) >> 4; // set data bit 6 to pe2
+                gpioe |= (payload & (1 << 7)) >> 4; // set data bit 7 to pe3
+                gpioe |= (payload & (1 << 8)) >> 4; // set data bit 8 to pe4
+                gpioe |= (payload & (1 << 9)) >> 4; // set data bit 9 to pe5
+                gpioe |= (payload & (1 << 10)) >> 4; // set data bit 10 to pe6
 
                 Self {
-                    gpioa: (data & (1 << 15)) >> 15, // set data bit 15 to pa0
+                    gpioa: (payload & (1 << 15)) >> 15, // set data bit 15 to pa0
                     gpiob,
                     gpioc,
                     gpioe,
                 }
             }
-            Frame::CheckStatus | Frame::Read => Self {
+            Frame::Read => Self {
+                gpioa: 0,
+                gpiob: 1 << 5, // set data bit 1 to 1 to pb5
+                gpioc: 0,
+                gpioe: 0,
+            },
+            Frame::CheckStatus | Frame::ReadData => Self {
                 gpioa: 0,
                 gpiob: 0,
                 gpioc: 0,

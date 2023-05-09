@@ -2,19 +2,10 @@ use stm32f1xx_hal::{device, gpio};
 
 macro_rules! port_write {
     ($GPIO:expr, $CLR_MASK:expr, $BIT_MASK:expr) => {
-        // let gpio = stringify!($GPIO);
         $GPIO.odr.modify(|r, w| {
             let mut bits = r.bits(); // read bits
-            // defmt::println!(
-            //     "{} bits {:#034b}, clr_mask: {:#034b}, bit_mask: {:#034b}",
-            //     gpio,
-            //     bits,
-            //     $CLR_MASK,
-            //     $BIT_MASK
-            // );
             bits &= $CLR_MASK; // clear bits before applying mask
             bits |= $BIT_MASK & ($CLR_MASK ^ 0xFFFF); // apply mask
-            // defmt::println!("{} result {:#034b}", gpio, bits);
             unsafe { w.bits(bits) } // write bits
         });
     };

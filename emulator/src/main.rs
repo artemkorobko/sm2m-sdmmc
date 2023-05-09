@@ -212,7 +212,7 @@ mod app {
             if !*debug {
                 emulator.step();
             } else {
-                defmt::println!("Received reply. Press 'Step' button");
+                defmt::println!("Press 'Step' button");
             }
         });
     }
