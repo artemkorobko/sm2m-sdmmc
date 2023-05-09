@@ -38,25 +38,31 @@ pub struct Machine {
 }
 
 impl Machine {
-    pub fn new(input: input::Bus, output: output::Bus, led: LedPin) -> Self {
+    pub fn new(input: input::Bus, output: output::Bus, led: LedPin, debug: bool) -> Self {
         Self {
             input,
             output,
             led,
             state: State::Ready,
             mode: Mode::Write,
-            debug: false,
+            debug,
             last_address: 0,
         }
     }
 
+    pub fn set_debug(&mut self, debug: bool) {
+        self.debug = debug;
+    }
+
     pub fn start_write(&mut self, debug: bool) {
+        defmt::println!("Start write emulation with debug: {}", debug);
         self.mode = Mode::Write;
         self.debug = debug;
         self.start();
     }
 
     pub fn start_read(&mut self, debug: bool) {
+        defmt::println!("Start read emulation with debug: {}", debug);
         self.mode = Mode::Read;
         self.debug = debug;
         self.start();
@@ -136,7 +142,10 @@ impl Machine {
             }
             State::Stop => {
                 if self.read().is_some() {
-                    log!(self.debug, "Emulation completed");
+                    match self.mode {
+                        Mode::Write => defmt::println!("Write emulation completed"),
+                        Mode::Read => defmt::println!("Read emulation completed"),
+                    }
                 }
             }
         }

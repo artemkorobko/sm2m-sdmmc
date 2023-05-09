@@ -25,6 +25,7 @@ mod app {
     struct Local {
         keyboard: keyboard::Keyboard,
         timer: timer::CounterUs<pac::TIM1>,
+        trigger: gpio::PA15<gpio::Input<gpio::PullDown>>,
     }
 
     #[init]
@@ -122,7 +123,8 @@ mod app {
         let output = output::Bus::new(output_pins);
 
         // Create emulator
-        let emulator = emulator::Machine::new(input, output, led);
+        let debug = true;
+        let emulator = emulator::Machine::new(input, output, led, debug);
 
         // Configure RDY interrupt
         let mut trigger = pa15.into_pull_down_input(&mut gpioa.crh); // RDY
@@ -138,18 +140,19 @@ mod app {
         defmt::println!("Ready");
 
         (
-            Shared {
-                emulator,
-                debug: true,
+            Shared { emulator, debug },
+            Local {
+                keyboard,
+                timer,
+                trigger,
             },
-            Local { keyboard, timer },
             init::Monotonics(),
         )
     }
 
     #[task(
         binds = TIM1_UP,
-        priority = 2,
+        priority = 1,
         local = [keyboard, timer, debouncer: u32 = 0, notified: bool = false]
     )]
     fn keyboard_timer(cx: keyboard_timer::Context) {
@@ -174,30 +177,25 @@ mod app {
         cx.local.timer.clear_interrupt(timer::Event::Update);
     }
 
-    #[task(priority = 3, shared = [emulator, debug])]
+    #[task(priority = 1, shared = [emulator, debug])]
     fn keyboard_handler(cx: keyboard_handler::Context, key: keyboard::Key) {
         let emulator = cx.shared.emulator;
         let debug = cx.shared.debug;
 
         (emulator, debug).lock(|emulator, debug| match key {
-            keyboard::Key::StartRead => {
-                defmt::println!("Start read, debug: {}", debug);
-                emulator.start_read(*debug);
-            }
-            keyboard::Key::StartWrite => {
-                defmt::println!("Start write, debug: {}", debug);
-                emulator.start_write(*debug);
-            }
+            keyboard::Key::StartRead => emulator.start_read(*debug),
+            keyboard::Key::StartWrite => emulator.start_write(*debug),
             keyboard::Key::Step => emulator.step(),
             keyboard::Key::Stop => emulator.stop(),
             keyboard::Key::Debug => {
                 *debug = !*debug;
+                emulator.set_debug(*debug);
                 defmt::println!("Debug: {}", debug);
             }
         });
     }
 
-    #[task(binds = EXTI15_10, priority = 1, shared = [emulator, debug])]
+    #[task(binds = EXTI15_10, priority = 2, local = [trigger], shared = [emulator, debug])]
     fn rdy(cx: rdy::Context) {
         let emulator = cx.shared.emulator;
         let debug = cx.shared.debug;
@@ -205,5 +203,7 @@ mod app {
         (emulator, debug).lock(|emulator, _debug| {
             emulator.step();
         });
+
+        cx.local.trigger.clear_interrupt_pending_bit();
     }
 }

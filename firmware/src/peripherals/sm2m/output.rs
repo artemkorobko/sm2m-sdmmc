@@ -76,6 +76,8 @@ impl Bus {
     }
 
     pub fn write(&mut self, frame: Frame) {
+        self.pins.rdy.set_high();
+
         // Assume that all signal pins CTRLO_0, CTRLO_1, RDY,
         // CTRL_D, ERRO, RSTE, SETE, DTEO, are set to 1 during write.
         match frame {
