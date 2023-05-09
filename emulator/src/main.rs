@@ -181,21 +181,15 @@ mod app {
 
         (emulator, debug).lock(|emulator, debug| match key {
             keyboard::Key::StartRead => {
-                defmt::println!("Start READ, debug: {}", debug);
+                defmt::println!("Start read, debug: {}", debug);
                 emulator.start_read(*debug);
             }
             keyboard::Key::StartWrite => {
-                defmt::println!("Start WRITE, debug: {}", debug);
+                defmt::println!("Start write, debug: {}", debug);
                 emulator.start_write(*debug);
             }
-            keyboard::Key::Step => {
-                defmt::println!("Step");
-                emulator.step();
-            }
-            keyboard::Key::Stop => {
-                defmt::println!("Stop");
-                emulator.stop();
-            }
+            keyboard::Key::Step => emulator.step(),
+            keyboard::Key::Stop => emulator.stop(),
             keyboard::Key::Debug => {
                 *debug = !*debug;
                 defmt::println!("Debug: {}", debug);
@@ -208,12 +202,8 @@ mod app {
         let emulator = cx.shared.emulator;
         let debug = cx.shared.debug;
 
-        (emulator, debug).lock(|emulator, debug| {
-            if !*debug {
-                emulator.step();
-            } else {
-                defmt::println!("Press 'Step' button");
-            }
+        (emulator, debug).lock(|emulator, _debug| {
+            emulator.step();
         });
     }
 }
