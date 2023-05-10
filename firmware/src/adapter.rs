@@ -1,6 +1,9 @@
 use crate::{
     error::AppError,
-    peripherals::sm2m::{input, output},
+    peripherals::{
+        sdmmc,
+        sm2m::{input, output},
+    },
 };
 
 enum Mode {
@@ -8,19 +11,22 @@ enum Mode {
     Address(u16),
     Read(u16),
     Write(u16),
+    Error(u16),
 }
 
 pub struct Device {
     input: input::Bus,
     output: output::Bus,
+    card: sdmmc::Card,
     mode: Mode,
 }
 
 impl Device {
-    pub fn new(input: input::Bus, output: output::Bus) -> Self {
+    pub fn new(input: input::Bus, output: output::Bus, card: sdmmc::Card) -> Self {
         Self {
             input,
             output,
+            card,
             mode: Mode::Ready,
         }
     }
@@ -56,7 +62,7 @@ impl Device {
                 input::Frame::Address(address) => self.handle_address(address),
                 _ => {
                     defmt::println!("Received unhandled frame in READY state: {}", payload);
-                    self.handle_error()
+                    self.handle_error(AppError::UnhandledCommand.opcode())
                 }
             },
             Mode::Address(address) => match input::Frame::from(payload) {
@@ -64,11 +70,12 @@ impl Device {
                 input::Frame::Write => self.handle_write(address),
                 _ => {
                     defmt::println!("Received unhandled frame in ADDRESS state: {}", payload);
-                    self.handle_error()
+                    self.handle_error(AppError::UnhandledCommand.opcode())
                 }
             },
             Mode::Read(address) => self.handle_read_payload(address),
             Mode::Write(address) => self.handle_write_payload(address, payload),
+            Mode::Error(opcode) => self.handle_error(opcode),
         }
     }
 
@@ -100,8 +107,8 @@ impl Device {
         defmt::println!("Handle write payload {} to address {}", payload, address);
     }
 
-    fn handle_error(&mut self) {
-        let opcode = AppError::UnhandledCommand.opcode();
-        self.output.write(output::Frame::Error(opcode))
+    fn handle_error(&mut self, opcode: u16) {
+        self.output.write(output::Frame::Error(opcode));
+        self.mode = Mode::Error(opcode);
     }
 }

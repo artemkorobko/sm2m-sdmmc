@@ -4,8 +4,8 @@
 use defmt_rtt as _;
 use panic_probe as _;
 
-mod error;
 mod adapter;
+mod error;
 mod peripherals;
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER, PVD, CAN_RX1, CAN_SCE])]
@@ -25,7 +25,6 @@ mod app {
     #[local]
     struct Local {
         adapter: adapter::Device,
-        card: sdmmc::Card,
         dtli: gpio::PB13<gpio::Input<gpio::PullDown>>,
         sdmmc_detect_pin: gpio::PA3<gpio::Input<gpio::PullUp>>,
         indicators: indicators::Indicators,
@@ -139,7 +138,7 @@ mod app {
         let card = sdmmc::Card::from(embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin));
 
         // Create adapter
-        let adapter = adapter::Device::new(input, output);
+        let adapter = adapter::Device::new(input, output, card);
 
         // Configure LED indicators
         let pins = indicators::Pins {
@@ -171,7 +170,6 @@ mod app {
             Shared {},
             Local {
                 adapter,
-                card,
                 dtli,
                 sdmmc_detect_pin,
                 indicators,
@@ -190,7 +188,6 @@ mod app {
 
     #[task(binds = EXTI15_10, local = [
             adapter,
-            card,
             dtli,
             sdmmc_detect_pin,
             indicators,
