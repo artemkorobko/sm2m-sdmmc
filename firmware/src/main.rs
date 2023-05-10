@@ -30,7 +30,7 @@ mod app {
         card: sdmmc::Card,
         dtli: gpio::PB13<gpio::Input<gpio::PullDown>>,
         sdmmc_detect_pin: gpio::PA3<gpio::Input<gpio::PullUp>>,
-        indicators: Indicators,
+        indicators: indicators::Indicators,
     }
 
     #[init]
@@ -120,16 +120,6 @@ mod app {
 
         let output = sm2m::output::Bus::new(pins);
 
-        // Configure LED indicators
-        let indicator_pins = IndicatorPins {
-            pa0: gpioa.pa0,
-            pa1: gpioa.pa1,
-            pa2: gpioa.pa2,
-            crl: &mut gpioa.crl,
-        };
-
-        let mut indicators = Indicators::configure(indicator_pins);
-
         // Configure SDMMC
         let sdmmc_detect_pin = gpioa.pa3.into_pull_up_input(&mut gpioa.crl);
         let sdmmc_cs_pin = gpioa.pa4.into_push_pull_output(&mut gpioa.crl);
@@ -153,10 +143,23 @@ mod app {
         // Create adapter
         let adapter = adapter::Device::new(input, output);
 
+        // Configure LED indicators
+        let pins = indicators::Pins {
+            system_error: into_output!(gpioa.pa0, &mut gpioa.crl),
+            write: into_output!(gpioa.pa1, &mut gpioa.crl),
+            read: into_output!(gpioa.pa2, &mut gpioa.crl),
+        };
+
+        let mut indicators = indicators::Indicators::new(pins);
+
         // Indicate adapter startup
-        // indicators.all_on();
+        // self.system_error_on();
+        // self.write_on();
+        // self.read_on();
         // cortex_m::asm::delay(72_000_000);
-        // indicators.all_off();
+        // self.system_error_off();
+        // self.write_off();
+        // self.read_off();
 
         // Enable SM2M bus interrupt
         let mut dtli = gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // DTLI
