@@ -5,13 +5,11 @@ use defmt_rtt as _;
 use panic_probe as _;
 
 mod error;
-// mod mode;
 mod adapter;
 mod peripherals;
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER, PVD, CAN_RX1, CAN_SCE])]
 mod app {
-    // use crate::mode::Mode;
     use crate::adapter;
     use crate::peripherals::*;
 
