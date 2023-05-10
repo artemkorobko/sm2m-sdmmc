@@ -9,6 +9,8 @@ mod input;
 mod keyboard;
 mod output;
 
+const MAX_DEBUG_BYTES: u16 = 10;
+
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER, PVD, CAN_RX1, CAN_SCE])]
 mod app {
     use stm32f1xx_hal::{gpio, gpio::ExtiPin, pac, prelude::*, timer};
@@ -124,7 +126,12 @@ mod app {
 
         // Create emulator
         let debug = true;
-        let emulator = emulator::Machine::new(input, output, led, debug);
+        let max_bytes = if debug {
+            crate::MAX_DEBUG_BYTES
+        } else {
+            u16::MAX
+        };
+        let emulator = emulator::Machine::new(input, output, led, max_bytes, debug);
 
         // Configure RDY interrupt
         let mut trigger = pa15.into_pull_down_input(&mut gpioa.crh); // RDY
@@ -153,7 +160,7 @@ mod app {
     #[task(
         binds = TIM1_UP,
         priority = 1,
-        local = [keyboard, timer, debouncer: u32 = 0, notified: bool = false]
+        local = [keyboard, timer, debouncer: u32 = 0, notified: bool = false],
     )]
     fn keyboard_timer(cx: keyboard_timer::Context) {
         const MAX_DEBOUNCES: u32 = 10;
@@ -190,6 +197,12 @@ mod app {
             keyboard::Key::Debug => {
                 *debug = !*debug;
                 emulator.set_debug(*debug);
+                let max_bytes = if *debug {
+                    crate::MAX_DEBUG_BYTES
+                } else {
+                    u16::MAX
+                };
+                emulator.set_max_bytes(max_bytes);
                 defmt::println!("Debug: {}", debug);
             }
         });
@@ -200,8 +213,10 @@ mod app {
         let emulator = cx.shared.emulator;
         let debug = cx.shared.debug;
 
-        (emulator, debug).lock(|emulator, _debug| {
-            emulator.step();
+        (emulator, debug).lock(|emulator, debug| {
+            if !*debug {
+                emulator.step();
+            }
         });
 
         cx.local.trigger.clear_interrupt_pending_bit();

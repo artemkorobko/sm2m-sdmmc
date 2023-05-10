@@ -15,6 +15,7 @@ enum Mode {
     Read,
 }
 
+#[derive(Eq, PartialEq)]
 enum State {
     Ready,
     Reset,
@@ -35,10 +36,17 @@ pub struct Machine {
     mode: Mode,
     debug: bool,
     last_address: u16,
+    max_bytes: u16,
 }
 
 impl Machine {
-    pub fn new(input: input::Bus, output: output::Bus, led: LedPin, debug: bool) -> Self {
+    pub fn new(
+        input: input::Bus,
+        output: output::Bus,
+        led: LedPin,
+        max_bytes: u16,
+        debug: bool,
+    ) -> Self {
         Self {
             input,
             output,
@@ -47,11 +55,20 @@ impl Machine {
             mode: Mode::Write,
             debug,
             last_address: 0,
+            max_bytes,
         }
+    }
+
+    pub fn is_completed(&self) -> bool {
+        self.state == State::Stop
     }
 
     pub fn set_debug(&mut self, debug: bool) {
         self.debug = debug;
+    }
+
+    pub fn set_max_bytes(&mut self, max_bytes: u16) {
+        self.max_bytes = max_bytes;
     }
 
     pub fn start_write(&mut self, debug: bool) {
@@ -108,7 +125,7 @@ impl Machine {
             }
             State::Read(mut count) => {
                 if let Some(data) = self.read() {
-                    if count < 10 {
+                    if count < self.max_bytes {
                         count += 1;
 
                         if count == 1 {
@@ -128,7 +145,7 @@ impl Machine {
             }
             State::Write(mut data) => {
                 if self.read().is_some() {
-                    if data < 10 {
+                    if data < self.max_bytes {
                         data += 1;
                         log!(self.debug, "Send write data: {}", data);
                         self.state = State::Write(data);
