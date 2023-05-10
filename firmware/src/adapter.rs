@@ -60,18 +60,12 @@ impl Device {
             Mode::Ready => match input::Frame::from(payload) {
                 input::Frame::CheckStatus => self.handle_check_status(),
                 input::Frame::Address(address) => self.handle_address(address),
-                _ => {
-                    defmt::println!("Received unhandled frame in READY state: {}", payload);
-                    self.handle_error(AppError::UnhandledCommand.opcode())
-                }
+                _ => self.handle_error(AppError::UnhandledReadyCommand),
             },
             Mode::Address(address) => match input::Frame::from(payload) {
                 input::Frame::Read => self.handle_read(address),
                 input::Frame::Write => self.handle_write(address),
-                _ => {
-                    defmt::println!("Received unhandled frame in ADDRESS state: {}", payload);
-                    self.handle_error(AppError::UnhandledCommand.opcode())
-                }
+                _ => self.handle_error(AppError::UnhandledAddressCommand),
             },
             Mode::Read(address) => self.handle_read_payload(address),
             Mode::Write(address) => self.handle_write_payload(address, payload),
@@ -107,7 +101,8 @@ impl Device {
         defmt::println!("Handle write payload {} to address {}", payload, address);
     }
 
-    fn handle_error(&mut self, opcode: u16) {
+    fn handle_error<T: Into<u16>>(&mut self, error: T) {
+        let opcode = error.into();
         self.output.write(output::Frame::Error(opcode));
         self.mode = Mode::Error(opcode);
     }

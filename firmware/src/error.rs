@@ -7,8 +7,8 @@ pub type ControllerError = SdMmcControllerError<SpiError>;
 #[derive(Clone)]
 pub enum AppError {
     SdmmcDetached,
-    UnknownCommand,
-    UnhandledCommand,
+    UnhandledReadyCommand,
+    UnhandledAddressCommand,
     SdMmcSpi(SpiError),
     SdMmcController(ControllerError),
     SdMmcFile(embedded_sdmmc::filesystem::FileError),
@@ -20,8 +20,8 @@ impl AppError {
 
         match self {
             SdmmcDetached => 1,
-            UnknownCommand => 2,
-            UnhandledCommand => 3,
+            UnhandledReadyCommand => 2,
+            UnhandledAddressCommand => 3,
             SdMmcController(ControllerError::DeviceError(SpiError::Transport))
             | SdMmcSpi(SpiError::Transport) => 4,
             SdMmcController(ControllerError::DeviceError(SpiError::CantEnableCRC))
@@ -96,5 +96,11 @@ impl From<ControllerError> for AppError {
 impl From<embedded_sdmmc::filesystem::FileError> for AppError {
     fn from(value: embedded_sdmmc::filesystem::FileError) -> Self {
         Self::SdMmcFile(value)
+    }
+}
+
+impl From<AppError> for u16 {
+    fn from(value: AppError) -> Self {
+        value.opcode()
     }
 }
