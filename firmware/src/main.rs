@@ -84,32 +84,38 @@ mod app {
 
         let input = sm2m::input::Bus::new(pins);
 
+        macro_rules! into_output {
+            ($pin:expr, $cr:expr) => {
+                $pin.into_push_pull_output_with_state($cr, gpio::PinState::High)
+            };
+        }
+
         // Configure SM2M output bus
         let pins = sm2m::output::Pins {
-            do_0: gpioc.pc10.into_push_pull_output(&mut gpioc.crh),
-            do_1: gpioa.pa12.into_push_pull_output(&mut gpioa.crh),
-            do_2: gpioa.pa10.into_push_pull_output(&mut gpioa.crh),
-            do_3: gpioa.pa8.into_push_pull_output(&mut gpioa.crh),
-            do_4: gpioc.pc9.into_push_pull_output(&mut gpioc.crh),
-            do_5: gpioc.pc8.into_push_pull_output(&mut gpioc.crh),
-            do_6: gpioc.pc7.into_push_pull_output(&mut gpioc.crl),
-            do_7: gpiod.pd15.into_push_pull_output(&mut gpiod.crh),
-            do_8: gpiod.pd14.into_push_pull_output(&mut gpiod.crh),
-            do_9: gpioc.pc6.into_push_pull_output(&mut gpioc.crl),
-            do_10: gpiod.pd13.into_push_pull_output(&mut gpiod.crh),
-            do_11: gpiod.pd8.into_push_pull_output(&mut gpiod.crh),
-            do_12: gpiod.pd11.into_push_pull_output(&mut gpiod.crh),
-            do_13: gpiod.pd12.into_push_pull_output(&mut gpiod.crh),
-            do_14: gpiob.pb15.into_push_pull_output(&mut gpiob.crh),
-            do_15: gpiod.pd9.into_push_pull_output(&mut gpiod.crh),
-            ctrlo_0: gpioa.pa11.into_push_pull_output(&mut gpioa.crh),
-            ctrlo_1: gpioa.pa9.into_push_pull_output(&mut gpioa.crh),
-            rdy: gpiod.pd10.into_push_pull_output(&mut gpiod.crh),
-            ctrl_d: gpioc.pc12.into_push_pull_output(&mut gpioc.crh),
-            erro: pa15.into_push_pull_output(&mut gpioa.crh),
-            rste: gpiob.pb12.into_push_pull_output(&mut gpiob.crh),
-            sete: gpioc.pc3.into_push_pull_output(&mut gpioc.crl),
-            dteo: gpioc.pc11.into_push_pull_output(&mut gpioc.crh),
+            do_0: into_output!(gpioc.pc10, &mut gpioc.crh),
+            do_1: into_output!(gpioa.pa12, &mut gpioa.crh),
+            do_2: into_output!(gpioa.pa10, &mut gpioa.crh),
+            do_3: into_output!(gpioa.pa8, &mut gpioa.crh),
+            do_4: into_output!(gpioc.pc9, &mut gpioc.crh),
+            do_5: into_output!(gpioc.pc8, &mut gpioc.crh),
+            do_6: into_output!(gpioc.pc7, &mut gpioc.crl),
+            do_7: into_output!(gpiod.pd15, &mut gpiod.crh),
+            do_8: into_output!(gpiod.pd14, &mut gpiod.crh),
+            do_9: into_output!(gpioc.pc6, &mut gpioc.crl),
+            do_10: into_output!(gpiod.pd13, &mut gpiod.crh),
+            do_11: into_output!(gpiod.pd8, &mut gpiod.crh),
+            do_12: into_output!(gpiod.pd11, &mut gpiod.crh),
+            do_13: into_output!(gpiod.pd12, &mut gpiod.crh),
+            do_14: into_output!(gpiob.pb15, &mut gpiob.crh),
+            do_15: into_output!(gpiod.pd9, &mut gpiod.crh),
+            ctrlo_0: into_output!(gpioa.pa11, &mut gpioa.crh),
+            ctrlo_1: into_output!(gpioa.pa9, &mut gpioa.crh),
+            rdy: into_output!(gpiod.pd10, &mut gpiod.crh),
+            ctrl_d: into_output!(gpioc.pc12, &mut gpioc.crh),
+            erro: into_output!(pa15, &mut gpioa.crh),
+            rste: into_output!(gpiob.pb12, &mut gpiob.crh),
+            sete: into_output!(gpioc.pc3, &mut gpioc.crl),
+            dteo: into_output!(gpioc.pc11, &mut gpioc.crh),
         };
 
         let output = sm2m::output::Bus::new(pins);
