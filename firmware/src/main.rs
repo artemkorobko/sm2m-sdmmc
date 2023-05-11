@@ -26,7 +26,6 @@ mod app {
     struct Local {
         adapter: adapter::Device,
         dtli: gpio::PB13<gpio::Input<gpio::PullDown>>,
-        sdmmc_detect_pin: gpio::PA3<gpio::Input<gpio::PullUp>>,
         indicators: indicators::Indicators,
     }
 
@@ -135,7 +134,8 @@ mod app {
             clocks,
         );
 
-        let card = sdmmc::Card::from(embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin));
+        let sdmmc_spi = embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin);
+        let card = sdmmc::Card::new(sdmmc_spi, sdmmc_detect_pin);
 
         // Create adapter
         let adapter = adapter::Device::new(input, output, card);
@@ -171,7 +171,6 @@ mod app {
             Local {
                 adapter,
                 dtli,
-                sdmmc_detect_pin,
                 indicators,
             },
             init::Monotonics(),
@@ -189,7 +188,6 @@ mod app {
     #[task(binds = EXTI15_10, local = [
             adapter,
             dtli,
-            sdmmc_detect_pin,
             indicators,
         ])]
     fn dtli(cx: dtli::Context) {

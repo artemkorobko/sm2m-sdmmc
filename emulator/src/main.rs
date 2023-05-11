@@ -27,7 +27,8 @@ mod app {
     struct Local {
         keyboard: keyboard::Keyboard,
         timer: timer::CounterUs<pac::TIM1>,
-        trigger: gpio::PA15<gpio::Input<gpio::PullDown>>,
+        erro: gpio::PB3<gpio::Input<gpio::PullDown>>,
+        rdy: gpio::PA15<gpio::Input<gpio::PullDown>>,
     }
 
     #[init]
@@ -49,7 +50,7 @@ mod app {
         let mut gpioe = cx.device.GPIOE.split();
 
         // Disable JTAG
-        let (pa15, _pb3, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
+        let (pa15, pb3, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
 
         // Configure keyboard
         let config = keyboard::Pins {
@@ -88,7 +89,6 @@ mod app {
             ctrlo_0: gpiob.pb15.into_pull_down_input(&mut gpiob.crh),
             ctrlo_1: gpiob.pb14.into_pull_down_input(&mut gpiob.crh),
             ctrld: gpiob.pb10.into_pull_down_input(&mut gpiob.crh),
-            erro: gpioe.pe15.into_pull_down_input(&mut gpioe.crh),
             rste: gpioe.pe14.into_pull_down_input(&mut gpioe.crh),
             sete: gpioe.pe13.into_pull_down_input(&mut gpioe.crh),
             dteo: gpioe.pe12.into_pull_down_input(&mut gpioe.crh),
@@ -133,11 +133,18 @@ mod app {
         };
         let emulator = emulator::Machine::new(input, output, led, max_bytes, debug);
 
+        // Configure ERRO interrupt
+        // let mut erro = gpioe.pe15.into_pull_down_input(&mut gpioe.crh);
+        let mut erro = pb3.into_pull_down_input(&mut gpiob.crl);
+        erro.make_interrupt_source(&mut afio);
+        erro.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
+        erro.enable_interrupt(&mut cx.device.EXTI);
+
         // Configure RDY interrupt
-        let mut trigger = pa15.into_pull_down_input(&mut gpioa.crh); // RDY
-        trigger.make_interrupt_source(&mut afio);
-        trigger.enable_interrupt(&mut cx.device.EXTI);
-        trigger.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
+        let mut rdy = pa15.into_pull_down_input(&mut gpioa.crh);
+        rdy.make_interrupt_source(&mut afio);
+        rdy.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
+        rdy.enable_interrupt(&mut cx.device.EXTI);
 
         // Configure keyboard timer
         let mut timer = cx.device.TIM1.counter_us(&clocks);
@@ -151,7 +158,8 @@ mod app {
             Local {
                 keyboard,
                 timer,
-                trigger,
+                erro,
+                rdy,
             },
             init::Monotonics(),
         )
@@ -208,17 +216,27 @@ mod app {
         });
     }
 
-    #[task(binds = EXTI15_10, priority = 2, local = [trigger], shared = [emulator, debug])]
-    fn rdy(cx: rdy::Context) {
-        let emulator = cx.shared.emulator;
-        let debug = cx.shared.debug;
+    #[task(binds = EXTI3, priority = 2, local = [erro], shared = [emulator])]
+    fn erro(mut cx: erro::Context) {
+        cx.shared.emulator.lock(|emulator| {
+            if let Some(opcode) = emulator.read() {
+                defmt::println!("Received error: {}", opcode);
+            } else {
+                defmt::println!("Received unknown error");
+            }
+        });
 
-        (emulator, debug).lock(|emulator, debug| {
+        cx.local.erro.clear_interrupt_pending_bit();
+    }
+
+    #[task(binds = EXTI15_10, priority = 2, local = [rdy], shared = [emulator, debug])]
+    fn rdy(cx: rdy::Context) {
+        (cx.shared.emulator, cx.shared.debug).lock(|emulator, debug| {
             if !*debug {
                 emulator.step();
             }
         });
 
-        cx.local.trigger.clear_interrupt_pending_bit();
+        cx.local.rdy.clear_interrupt_pending_bit();
     }
 }

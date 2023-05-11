@@ -78,8 +78,8 @@ impl Bus {
     pub fn write(&mut self, frame: Frame) {
         self.pins.rdy.set_high();
 
-        // Assume that all signal pins CTRLO_0, CTRLO_1, RDY,
-        // CTRL_D, ERRO, RSTE, SETE, DTEO, are set to 1 during write.
+        // Assume that all signal pins CTRLO_0, CTRLO_1, RDY, CTRL_D, ERRO, RSTE, SETE, DTEO,
+        // are set to 1 during write.
         match frame {
             Frame::Ack => {
                 self.write_ack();
@@ -122,7 +122,7 @@ impl Bus {
         pc |= (data & (1 << 9)) >> 3; // Write data bit 9 to PC6
 
         let mut pd = 0b0000010000000000; // RDY (PD10) is set to 1
-        pc |= (data & (1 << 7)) << 8; // Write data bit 7 to PD15
+        pd |= (data & (1 << 7)) << 8; // Write data bit 7 to PD15
         pd |= (data & (1 << 8)) << 6; // Write data bit 8 to PD14
         pd |= (data & (1 << 10)) << 3; // Write data bit 10 to PD13
         pd |= (data & (1 << 11)) >> 3; // Write data bit 11 to PD8

@@ -11,22 +11,31 @@ pub type Mosi = gpio::PA7<gpio::Alternate>;
 pub type SpiPins = (Sck, Miso, Mosi);
 pub type SpiBus = spi::Spi<pac::SPI1, spi::Spi1NoRemap, SpiPins, u8>;
 pub type SdMmcSpi = embedded_sdmmc::SdMmcSpi<SpiBus, Cs>;
+pub type SdMmcDetectPin = gpio::PA3<gpio::Input<gpio::PullUp>>;
 
-pub struct Card(SdMmcSpi);
+pub struct Card {
+    spi: SdMmcSpi,
+    _detect_pin: SdMmcDetectPin,
+}
 
 impl Card {
+    pub fn new(spi: SdMmcSpi, detect_pin: SdMmcDetectPin) -> Self {
+        Self {
+            spi,
+            _detect_pin: detect_pin,
+        }
+    }
+
+    pub fn is_attached(&mut self) -> bool {
+        self.open().is_ok()
+    }
+
     pub fn open(&mut self) -> Result<Controller<'_>, AppError> {
-        let spi = self.0.acquire()?;
+        let spi = self.spi.acquire()?;
         let time = StaticTimeSource::default();
         let mut ctl = embedded_sdmmc::Controller::new(spi, time);
         let vol = ctl.get_volume(embedded_sdmmc::VolumeIdx(0))?;
         let dir = ctl.open_root_dir(&vol)?;
         Ok(Controller::new(ctl, vol, dir))
-    }
-}
-
-impl From<SdMmcSpi> for Card {
-    fn from(value: SdMmcSpi) -> Self {
-        Self(value)
     }
 }

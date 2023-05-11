@@ -88,13 +88,13 @@ impl Machine {
     pub fn step(&mut self) {
         match self.state {
             State::Ready => {
-                log!(self.debug, "Send reset");
+                log!(self.debug, "> Send reset CMD");
                 self.state = State::Reset;
                 self.output.write(output::Frame::Reset);
             }
             State::Reset => {
                 if self.read().is_some() {
-                    log!(self.debug, "Send check status");
+                    log!(self.debug, "> Send check status CMD");
                     self.state = State::CheckStatus;
                     self.output.write(output::Frame::CheckStatus);
                 }
@@ -102,7 +102,7 @@ impl Machine {
             State::CheckStatus => {
                 if self.read().is_some() {
                     self.last_address += 1;
-                    log!(self.debug, "Send address: {}", self.last_address);
+                    log!(self.debug, "> Send address {} CMD", self.last_address);
                     self.state = State::Address;
                     self.output.write(output::Frame::Address(self.last_address));
                 }
@@ -111,12 +111,12 @@ impl Machine {
                 if self.read().is_some() {
                     match self.mode {
                         Mode::Read => {
-                            log!(self.debug, "Send read");
+                            log!(self.debug, "> Send read CMD");
                             self.state = State::Read(0);
                             self.output.write(output::Frame::Read);
                         }
                         Mode::Write => {
-                            log!(self.debug, "Send write");
+                            log!(self.debug, "> Send write CMD");
                             self.state = State::Write(0);
                             self.output.write(output::Frame::Write);
                         }
@@ -128,16 +128,15 @@ impl Machine {
                     if count < self.max_bytes {
                         count += 1;
 
-                        if count == 1 {
-                            log!(self.debug, "Send read data {}", count);
-                        } else {
-                            log!(self.debug, "Read: {}, send read data {}", data, count);
+                        if count > 1 {
+                            log!(self.debug, "< Read {}: {}", count, data);
                         }
 
                         self.state = State::Read(count);
                         self.output.write(output::Frame::ReadData);
                     } else {
-                        log!(self.debug, "Read: {}, send stop", data);
+                        log!(self.debug, "< Read {}: {}", count, data);
+                        log!(self.debug, "> Send stop CMD");
                         self.state = State::Stop;
                         self.output.write(output::Frame::Stop);
                     }
@@ -174,25 +173,20 @@ impl Machine {
         self.output.write(output::Frame::Stop);
     }
 
-    fn start(&mut self) {
-        self.led.set_high();
-        self.state = State::Ready;
-        self.step();
-    }
-
-    fn read(&mut self) -> Option<u16> {
+    pub fn read(&mut self) -> Option<u16> {
         match self.input.read() {
             input::Frame::Data(payload) => Some(payload),
-            input::Frame::Error(opcode) => {
-                log!(self.debug, "Received error: {}", opcode);
-                self.led.set_low();
-                None
-            }
             _ => {
                 log!(self.debug, "Received invalid frame");
                 self.led.set_low();
                 None
             }
         }
+    }
+
+    fn start(&mut self) {
+        self.led.set_high();
+        self.state = State::Ready;
+        self.step();
     }
 }

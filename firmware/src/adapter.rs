@@ -1,3 +1,5 @@
+use heapless::Vec;
+
 use crate::{
     error::AppError,
     peripherals::{
@@ -14,11 +16,14 @@ enum Mode {
     Error(u16),
 }
 
+const IO_BUFFER_SIZE: usize = 1024;
+
 pub struct Device {
     input: input::Bus,
     output: output::Bus,
     card: sdmmc::Card,
     mode: Mode,
+    buf: Vec<u8, IO_BUFFER_SIZE>,
 }
 
 impl Device {
@@ -28,16 +33,16 @@ impl Device {
             output,
             card,
             mode: Mode::Ready,
+            buf: Vec::new(),
         }
     }
 
     pub fn run(&mut self) {
         let action = self.input.read();
-        self.process_action(action);
-        self.output.write(output::Frame::Ack);
+        self.execute_action(action);
     }
 
-    pub fn process_action(&mut self, action: input::Action) {
+    fn execute_action(&mut self, action: input::Action) {
         match action {
             input::Action::Reset => self.handle_reset(),
             input::Action::End => self.handle_end(),
@@ -48,11 +53,13 @@ impl Device {
     fn handle_reset(&mut self) {
         defmt::println!("Handle reset");
         self.mode = Mode::Ready;
+        self.output.write(output::Frame::Ack);
     }
 
     fn handle_end(&mut self) {
         defmt::println!("Handle end");
         self.handle_reset();
+        self.output.write(output::Frame::Ack);
     }
 
     fn handle_data(&mut self, payload: u16) {
@@ -74,36 +81,46 @@ impl Device {
     }
 
     fn handle_check_status(&mut self) {
-        defmt::println!("Handle check status");
-        self.output.write(output::Frame::Ack);
+        if self.card.is_attached() {
+            self.output.write(output::Frame::Ack);
+        } else {
+            defmt::println!("Error: SDMMC detached");
+            self.handle_error(AppError::SdmmcDetached);
+        }
     }
 
     fn handle_address(&mut self, address: u16) {
         defmt::println!("Handle address: {}", address);
         self.mode = Mode::Address(address);
+        self.output.write(output::Frame::Ack);
     }
 
     fn handle_read(&mut self, address: u16) {
         defmt::println!("Handle read");
         self.mode = Mode::Read(address);
+        self.output.write(output::Frame::Ack);
     }
 
     fn handle_write(&mut self, address: u16) {
         defmt::println!("Handle write");
         self.mode = Mode::Write(address);
+        self.output.write(output::Frame::Ack);
     }
 
     fn handle_read_payload(&mut self, address: u16) {
         defmt::println!("Handle read payload from address {}", address);
+        self.output.write(output::Frame::Data(0));
     }
 
     fn handle_write_payload(&mut self, address: u16, payload: u16) {
         defmt::println!("Handle write payload {} to address {}", payload, address);
+        self.output.write(output::Frame::Ack);
     }
 
     fn handle_error<T: Into<u16>>(&mut self, error: T) {
         let opcode = error.into();
-        self.output.write(output::Frame::Error(opcode));
+        defmt::println!("Write error: {}", opcode);
         self.mode = Mode::Error(opcode);
+        self.output.write(output::Frame::Error(opcode));
     }
 }

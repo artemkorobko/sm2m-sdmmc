@@ -4,7 +4,6 @@ pub type Pin<const P: char, const N: u8> = gpio::Pin<P, N, gpio::Input<gpio::Pul
 
 pub enum Frame {
     Data(u16),
-    Error(u16),
     Set,
     Reset,
     End,
@@ -30,10 +29,10 @@ pub struct Pins {
     pub ctrlo_0: Pin<'B', 15>,
     pub ctrlo_1: Pin<'B', 14>,
     pub ctrld: Pin<'B', 10>,
-    pub erro: Pin<'E', 15>,
     pub rste: Pin<'E', 14>,
     pub sete: Pin<'E', 13>,
     pub dteo: Pin<'E', 12>,
+    // RDY and ERRO are configured as interrupts
 }
 
 pub struct Bus {
@@ -66,61 +65,71 @@ impl Bus {
 
     fn read_mask(&self) -> DataMask {
         DataMask {
-            gpioa: self.gpioa.idr.read().bits() as u16,
-            gpiob: self.gpiob.idr.read().bits() as u16,
-            gpioc: self.gpioc.idr.read().bits() as u16,
-            gpiod: self.gpiod.idr.read().bits() as u16,
-            gpioe: self.gpioe.idr.read().bits() as u16,
+            gpioa: self.gpioa.idr.read().bits(),
+            gpiob: self.gpiob.idr.read().bits(),
+            gpioc: self.gpioc.idr.read().bits(),
+            gpiod: self.gpiod.idr.read().bits(),
+            gpioe: self.gpioe.idr.read().bits(),
         }
     }
 }
 
 struct DataMask {
-    pub gpioa: u16,
-    pub gpiob: u16,
-    pub gpioc: u16,
-    pub gpiod: u16,
-    pub gpioe: u16,
+    pub gpioa: u32,
+    pub gpiob: u32,
+    pub gpioc: u32,
+    pub gpiod: u32,
+    pub gpioe: u32,
 }
 
 impl DataMask {
     pub fn reverse_bits(self) -> Self {
         Self {
-            gpioa: self.gpioa ^ u16::MAX,
-            gpiob: self.gpiob ^ u16::MAX,
-            gpioc: self.gpioc ^ u16::MAX,
-            gpiod: self.gpiod ^ u16::MAX,
-            gpioe: self.gpioe ^ u16::MAX,
+            gpioa: self.gpioa ^ u32::MAX,
+            gpiob: self.gpiob ^ u32::MAX,
+            gpioc: self.gpioc ^ u32::MAX,
+            gpiod: self.gpiod ^ u32::MAX,
+            gpioe: self.gpioe ^ u32::MAX,
         }
+    }
+
+    pub fn dteo(&self) -> bool {
+        (self.gpioe >> 12) & 1 == 1 // read DTEO from PE12
+    }
+
+    pub fn sete(&self) -> bool {
+        (self.gpioe >> 13) & 1 == 1 // read SETE from PE13
+    }
+
+    pub fn rste(&self) -> bool {
+        (self.gpioe >> 14) & 1 == 1 // read RSTE from PE14
+    }
+
+    pub fn data(&self) -> u16 {
+        let mut data = self.gpiod & 0b1111111; // read bits 0..6 from PD[0..6]
+        data |= (self.gpioe & (1 << 11)) >> 4; // read bit 7 from PE11
+        data |= self.gpioa & (1 << 8); // read bit 8 from PA8
+        data |= (self.gpioc & (0b11 << 6)) << 3; // read bit 9..10 from PC[6..7]
+        data |= self.gpiod & (0b11111 << 11); // read bit 11..15 from PD[11..15]
+        data as u16
     }
 }
 
 impl From<DataMask> for Frame {
     fn from(value: DataMask) -> Self {
-        let dteo = (value.gpioe >> 12) & 1 == 1; // read DTEO from PE12
-        let sete = (value.gpioe >> 13) & 1 == 1; // read SETE from PE13
-        let rste = (value.gpioe >> 14) & 1 == 1; // read RSTE from PE14
-        let erro = (1 << 15) & value.gpioe != 0; // read ERRO from PE15
-                                                 // let ctrld = (value.gpiob >> 10) & 1 == 1; // read CTRDL from BP10
-                                                 // let ctrlo_1 = (value.gpiob >> 14) & 1 == 1; // read CTRLO_1 from BP14
-                                                 // let ctrlo_0 = (value.gpiob >> 15) & 1 == 1; // read CTRLO_0 from BP15
+        // let erro = (1 << 15) & value.gpioe != 0; // read ERRO from PE15
+        // let ctrld = (value.gpiob >> 10) & 1 == 1; // read CTRDL from BP10
+        // let ctrlo_1 = (value.gpiob >> 14) & 1 == 1; // read CTRLO_1 from BP14
+        // let ctrlo_0 = (value.gpiob >> 15) & 1 == 1; // read CTRLO_0 from BP15
 
-        let mut data = value.gpiob & 0b1111111; // read bits 0..6 from PD[0..6]
-        data |= (value.gpioe & 0b100000000000) >> 4; // read bit 7 from PE11
-        data |= value.gpioa & 0b100000000; // read bit 8 from PA8
-        data |= (value.gpioc & 0b11000000) << 3; // read bit 9..10 from PC[6..7]
-        data |= (value.gpiod & 0b1111100000000000) << 3; // read bit 11..15 from PD[11..15]
-
-        if erro {
-            Self::Error(data)
-        } else if rste {
+        if value.rste() {
             Self::Reset
-        } else if sete {
+        } else if value.sete() {
             Self::Set
-        } else if dteo {
+        } else if value.dteo() {
             Self::End
         } else {
-            Self::Data(data)
+            Self::Data(value.data())
         }
     }
 }
