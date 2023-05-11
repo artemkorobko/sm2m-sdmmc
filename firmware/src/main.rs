@@ -130,7 +130,7 @@ mod app {
                 phase: spi::Phase::CaptureOnSecondTransition,
                 polarity: spi::Polarity::IdleHigh,
             },
-            100.kHz(),
+            20.MHz(),
             clocks,
         );
 

@@ -67,7 +67,15 @@ impl<'a> Controller<'a> {
         let mut buf = [0; 64];
         loop {
             match self.ctl.read(&self.vol, &mut src_file, &mut buf) {
-                Ok(size) => self.ctl.write(&mut self.vol, &mut dst_file, &buf[..size])?,
+                Ok(size) => {
+                    if size == 0 {
+                        self.ctl.close_file(&self.vol, dst_file)?;
+                        self.ctl.close_file(&self.vol, src_file)?;
+                        return Ok(true);
+                    } else {
+                        self.ctl.write(&mut self.vol, &mut dst_file, &buf[..size])?;
+                    }
+                }
                 Err(embedded_sdmmc::Error::EndOfFile) => {
                     self.ctl.close_file(&self.vol, dst_file)?;
                     self.ctl.close_file(&self.vol, src_file)?;

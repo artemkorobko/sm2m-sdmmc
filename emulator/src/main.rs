@@ -10,6 +10,7 @@ mod keyboard;
 mod output;
 
 const MAX_DEBUG_BYTES: u16 = 10;
+const MAX_RELEASE_BYTES: u16 = 32768;
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER, PVD, CAN_RX1, CAN_SCE])]
 mod app {
@@ -129,7 +130,7 @@ mod app {
         let max_bytes = if debug {
             crate::MAX_DEBUG_BYTES
         } else {
-            u16::MAX
+            crate::MAX_RELEASE_BYTES
         };
         let emulator = emulator::Machine::new(input, output, led, max_bytes, debug);
 
@@ -208,7 +209,7 @@ mod app {
                 let max_bytes = if *debug {
                     crate::MAX_DEBUG_BYTES
                 } else {
-                    u16::MAX
+                    crate::MAX_RELEASE_BYTES
                 };
                 emulator.set_max_bytes(max_bytes);
                 defmt::println!("Debug: {}", debug);
