@@ -9,8 +9,8 @@ mod input;
 mod keyboard;
 mod output;
 
-const MAX_DEBUG_BYTES: u16 = 10;
-const MAX_RELEASE_BYTES: u16 = 32768;
+const MAX_DEBUG_TRANSFERS: usize = 20 / 2; // 20 bytes / 2 bytes per transfer = 10 transfers
+const MAX_RELEASE_TRANSFERS: usize = (128 * 1024) / 2; // (128 Kbytes * 1024 bytes) / 2 bytes per transfer = 65536 transfers
 
 #[rtic::app(device = stm32f1xx_hal::pac, dispatchers = [TAMPER, PVD, CAN_RX1, CAN_SCE])]
 mod app {
@@ -36,11 +36,11 @@ mod app {
     fn init(mut cx: init::Context) -> (Shared, Local, init::Monotonics) {
         let mut flash = cx.device.FLASH.constrain();
         let mut afio = cx.device.AFIO.constrain();
-        let clocks = cx
-            .device
-            .RCC
-            .constrain()
+        let rcc = cx.device.RCC.constrain();
+        let clocks = rcc
             .cfgr
+            // .use_hse(25.MHz())
+            .sysclk(72.MHz())
             .hclk(72.MHz())
             .freeze(&mut flash.acr);
 
@@ -127,12 +127,11 @@ mod app {
 
         // Create emulator
         let debug = true;
-        let max_bytes = if debug {
-            crate::MAX_DEBUG_BYTES
+        let emulator = if debug {
+            emulator::Machine::new(input, output, led, crate::MAX_DEBUG_TRANSFERS, debug)
         } else {
-            crate::MAX_RELEASE_BYTES
+            emulator::Machine::new(input, output, led, crate::MAX_RELEASE_TRANSFERS, debug)
         };
-        let emulator = emulator::Machine::new(input, output, led, max_bytes, debug);
 
         // Configure ERRO interrupt
         // let mut erro = gpioe.pe15.into_pull_down_input(&mut gpioe.crh);
@@ -151,8 +150,6 @@ mod app {
         let mut timer = cx.device.TIM1.counter_us(&clocks);
         timer.start(1.millis()).unwrap();
         timer.listen(timer::Event::Update);
-
-        defmt::println!("Ready");
 
         (
             Shared { emulator, debug },
@@ -202,16 +199,19 @@ mod app {
             keyboard::Key::StartRead => emulator.start_read(*debug),
             keyboard::Key::StartWrite => emulator.start_write(*debug),
             keyboard::Key::Step => emulator.step(),
-            keyboard::Key::Stop => emulator.stop(),
+            keyboard::Key::Stop => {
+                defmt::println!("Terminate simulation");
+                emulator.stop();
+            }
             keyboard::Key::Debug => {
                 *debug = !*debug;
                 emulator.set_debug(*debug);
-                let max_bytes = if *debug {
-                    crate::MAX_DEBUG_BYTES
+                if *debug {
+                    emulator.set_transfers(crate::MAX_DEBUG_TRANSFERS);
                 } else {
-                    crate::MAX_RELEASE_BYTES
+                    emulator.set_transfers(crate::MAX_RELEASE_TRANSFERS);
                 };
-                emulator.set_max_bytes(max_bytes);
+
                 defmt::println!("Debug: {}", debug);
             }
         });
