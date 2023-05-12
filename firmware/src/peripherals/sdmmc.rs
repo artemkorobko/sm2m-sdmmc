@@ -5,7 +5,7 @@ pub mod time;
 
 pub use card::Card;
 pub use controller::Controller;
-pub use file::{AsFileName, FileName, FileNameEx};
+pub use file::{AsFileName, FileName};
 pub use time::StaticTimeSource;
 
 use self::card::{Cs, SpiBus};

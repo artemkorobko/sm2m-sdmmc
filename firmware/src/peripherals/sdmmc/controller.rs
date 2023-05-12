@@ -13,6 +13,10 @@ impl<'a> Controller<'a> {
         Self { ctl, vol, dir }
     }
 
+    pub fn close(mut self) {
+        self.ctl.close_dir(&self.vol, self.dir);
+    }
+
     pub fn is_file_exists(&mut self, name: &str) -> Result<bool, AppError> {
         match self.ctl.find_directory_entry(&self.vol, &self.dir, name) {
             Ok(_) => Ok(true),
@@ -21,7 +25,7 @@ impl<'a> Controller<'a> {
         }
     }
 
-    pub fn oped_file_read(&mut self, name: &str) -> Result<SdMmcFile, AppError> {
+    pub fn open_file_read(&mut self, name: &str) -> Result<SdMmcFile, AppError> {
         let file = self.ctl.open_file_in_dir(
             &mut self.vol,
             &self.dir,
@@ -41,6 +45,11 @@ impl<'a> Controller<'a> {
         )?;
 
         Ok(file)
+    }
+
+    pub fn close_file(&mut self, file: SdMmcFile) -> Result<(), AppError> {
+        self.ctl.close_file(&self.vol, file)?;
+        Ok(())
     }
 
     pub fn delete_file(&mut self, name: &str) -> Result<bool, AppError> {

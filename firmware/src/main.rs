@@ -31,7 +31,6 @@ mod app {
 
     #[init]
     fn init(mut cx: init::Context) -> (Shared, Local, init::Monotonics) {
-        // Configure MCU
         let mut afio = cx.device.AFIO.constrain();
         let mut flash = cx.device.FLASH.constrain();
         let rcc = cx.device.RCC.constrain();
@@ -39,6 +38,7 @@ mod app {
             .cfgr
             .use_hse(16.MHz())
             .sysclk(72.MHz())
+            .hclk(72.MHz())
             .pclk1(36.MHz())
             .pclk2(72.MHz())
             .freeze(&mut flash.acr);
@@ -127,10 +127,10 @@ mod app {
             (sdmmc_sck_pin, sdmmc_miso_pin, sdmmc_mosi_pin),
             &mut afio.mapr,
             spi::Mode {
-                phase: spi::Phase::CaptureOnSecondTransition,
-                polarity: spi::Polarity::IdleHigh,
+                phase: spi::Phase::CaptureOnFirstTransition,
+                polarity: spi::Polarity::IdleLow,
             },
-            20.MHz(),
+            25.MHz(),
             clocks,
         );
 
@@ -163,8 +163,6 @@ mod app {
         dtli.make_interrupt_source(&mut afio);
         dtli.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
         dtli.enable_interrupt(&mut cx.device.EXTI);
-
-        defmt::println!("Ready");
 
         (
             Shared {},

@@ -27,7 +27,13 @@ impl Card {
     }
 
     pub fn is_attached(&mut self) -> bool {
-        self.open().is_ok()
+        match self.open() {
+            Ok(controller) => {
+                controller.close();
+                true
+            }
+            Err(_) => false,
+        }
     }
 
     pub fn open(&mut self) -> Result<Controller<'_>, AppError> {

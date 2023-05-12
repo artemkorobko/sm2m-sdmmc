@@ -1,7 +1,6 @@
 use heapless::String;
 
 pub type FileName = String<5>;
-pub type FileNameEx = String<9>;
 
 pub trait AsFileName {
     fn as_file_name(self) -> String<5>;

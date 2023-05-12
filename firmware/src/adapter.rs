@@ -14,7 +14,7 @@ enum Mode {
     Error(u16),
 }
 
-const IO_BUFFER_SIZE: usize = 10 * 1024;
+const IO_BUFFER_SIZE: usize = 2 * 1024 * 5; // 2 bytes per word * 1024 bytes * 5 KB = 10 KB
 
 pub struct Device {
     input: input::Bus,
@@ -24,6 +24,7 @@ pub struct Device {
     file_name: sdmmc::FileName,
     buf: [u8; IO_BUFFER_SIZE],
     buf_pos: usize,
+    file_pos: usize,
 }
 
 impl Device {
@@ -36,6 +37,7 @@ impl Device {
             file_name: sdmmc::FileName::new(),
             buf: [0; IO_BUFFER_SIZE],
             buf_pos: 0,
+            file_pos: 0,
         }
     }
 
@@ -47,25 +49,24 @@ impl Device {
     fn execute(&mut self, action: input::Action) {
         match action {
             input::Action::Reset => self.handle_reset(),
-            input::Action::End => self.handle_end(),
+            input::Action::Stop => self.handle_stop(),
             input::Action::Data(payload) => self.handle_data(payload),
         }
     }
 
     fn handle_reset(&mut self) {
         self.buf_pos = 0;
+        self.file_pos = 0;
         self.mode = Mode::Ready;
         self.output.write(output::Frame::Ack);
     }
 
-    fn handle_end(&mut self) {
+    fn handle_stop(&mut self) {
         if self.buf_pos > 0 {
             self.handle_dump_payload();
         }
 
         self.handle_reset();
-        self.output.write(output::Frame::Ack);
-        defmt::println!("Done");
     }
 
     fn handle_data(&mut self, payload: u16) {
@@ -101,12 +102,18 @@ impl Device {
     }
 
     fn handle_read(&mut self) {
-        self.mode = Mode::Read;
-        self.output.write(output::Frame::Ack);
+        match self.read_buf_from_card(0) {
+            Ok(size) => {
+                self.file_pos = size;
+                self.mode = Mode::Read;
+                self.output.write(output::Frame::Ack);
+            }
+            Err(error) => self.handle_error(error),
+        }
     }
 
     fn handle_write(&mut self) {
-        match self.backup_and_remove() {
+        match self.remove_file() {
             Ok(_) => {
                 self.mode = Mode::Write;
                 self.output.write(output::Frame::Ack);
@@ -115,26 +122,41 @@ impl Device {
         }
     }
 
-    fn backup_and_remove(&mut self) -> Result<(), AppError> {
+    fn remove_file(&mut self) -> Result<(), AppError> {
         let mut controller = self.card.open()?;
         if controller.is_file_exists(&self.file_name)? {
-            // let mut copy = sdmmc::FileNameEx::new();
-            // copy.push_str(&self.file_name).ok();
-            // copy.push_str(".BAK").ok();
-            // if controller.is_file_exists(&copy)? {
-            // controller.delete_file(&copy)?;
-            // }
-
-            // controller.copy_file(&self.file_name, &copy)?;
             controller.delete_file(&self.file_name)?;
         }
-
         Ok(())
     }
 
     fn handle_read_payload(&mut self) {
-        defmt::println!("Handle read payload from {}", self.file_name.as_str());
-        self.output.write(output::Frame::Data(0));
+        if self.buf_pos + 1 > self.buf.len() {
+            self.buf.iter_mut().for_each(|byte| *byte = 0);
+            match self.read_buf_from_card(self.file_pos) {
+                Ok(size) => {
+                    self.buf_pos = 0;
+                    self.file_pos += size;
+                    self.handle_send_buf_chunk();
+                }
+                Err(error) => self.handle_error(error),
+            }
+        } else {
+            self.handle_send_buf_chunk();
+        }
+    }
+
+    fn handle_send_buf_chunk(&mut self) {
+        let payload = u16::from_le_bytes([self.buf[self.buf_pos], self.buf[self.buf_pos + 1]]);
+        self.output.write(output::Frame::Data(payload));
+        self.buf_pos += 2;
+    }
+
+    fn read_buf_from_card(&mut self, offset: usize) -> Result<usize, AppError> {
+        let mut controller = self.card.open()?;
+        let mut file = controller.open_file_read(&self.file_name)?;
+        file.seek_from_start(offset as u32)?;
+        controller.read(&mut file, &mut self.buf)
     }
 
     fn handle_write_payload(&mut self, payload: u16) {
@@ -146,7 +168,6 @@ impl Device {
             self.output.write(output::Frame::Ack)
         } else {
             self.handle_dump_payload();
-            self.buf_pos = 0;
             self.handle_write_payload(payload);
         }
     }
@@ -164,7 +185,10 @@ impl Device {
     fn write_buf_to_card(&mut self) -> Result<usize, AppError> {
         let mut controller = self.card.open()?;
         let mut file = controller.oped_file_append(&self.file_name)?;
-        controller.write(&mut file, &self.buf[0..self.buf_pos])
+        let size = controller.write(&mut file, &self.buf[0..self.buf_pos])?;
+        controller.close_file(file)?;
+        controller.close();
+        Ok(size)
     }
 
     fn handle_error<T: Into<u16>>(&mut self, error: T) {

@@ -4,7 +4,7 @@ pub type Pin<const P: char, const N: u8> = gpio::Pin<P, N, gpio::Input<gpio::Pul
 
 pub enum Action {
     Reset,
-    End,
+    Stop,
     Data(u16),
 }
 
@@ -92,7 +92,7 @@ impl Bus {
         if rsti {
             Action::Reset
         } else if dtei {
-            Action::End
+            Action::Stop
         } else {
             // Read data line
             let mut payload = (pb >> 7) & 1; // Read data bit 0 from PB7.
