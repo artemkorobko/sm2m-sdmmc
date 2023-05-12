@@ -21,8 +21,10 @@ enum State {
     Reset,
     CheckStatus,
     Address,
-    Read(u16),
-    Write(u16),
+    Read,
+    ReadData(usize),
+    Write,
+    WriteData(usize),
     Stop,
 }
 
@@ -35,8 +37,10 @@ pub struct Machine {
     state: State,
     mode: Mode,
     debug: bool,
+    transfers: usize,
+    last_received: u16,
     last_address: u16,
-    max_bytes: u16,
+    last_data: u16,
 }
 
 impl Machine {
@@ -44,7 +48,7 @@ impl Machine {
         input: input::Bus,
         output: output::Bus,
         led: LedPin,
-        max_bytes: u16,
+        transfers: usize,
         debug: bool,
     ) -> Self {
         Self {
@@ -54,8 +58,10 @@ impl Machine {
             state: State::Ready,
             mode: Mode::Write,
             debug,
+            transfers,
+            last_received: 0,
             last_address: 0,
-            max_bytes,
+            last_data: 0,
         }
     }
 
@@ -67,19 +73,27 @@ impl Machine {
         self.debug = debug;
     }
 
-    pub fn set_max_bytes(&mut self, max_bytes: u16) {
-        self.max_bytes = max_bytes;
+    pub fn set_transfers(&mut self, transfers: usize) {
+        self.transfers = transfers;
     }
 
     pub fn start_write(&mut self, debug: bool) {
-        defmt::println!("Start write emulation with debug: {}", debug);
+        defmt::println!(
+            "Start {} bytes write simulation with debug: {}",
+            self.transfers * 2,
+            debug
+        );
         self.mode = Mode::Write;
         self.debug = debug;
         self.start();
     }
 
     pub fn start_read(&mut self, debug: bool) {
-        defmt::println!("Start read emulation with debug: {}", debug);
+        defmt::println!(
+            "Start {} bytes read simulation with debug: {}",
+            self.transfers * 2,
+            debug
+        );
         self.mode = Mode::Read;
         self.debug = debug;
         self.start();
@@ -88,13 +102,11 @@ impl Machine {
     pub fn step(&mut self) {
         match self.state {
             State::Ready => {
-                log!(self.debug, "> Send reset CMD");
                 self.state = State::Reset;
                 self.output.write(output::Frame::Reset);
             }
             State::Reset => {
                 if self.read().is_some() {
-                    log!(self.debug, "> Send check status CMD");
                     self.state = State::CheckStatus;
                     self.output.write(output::Frame::CheckStatus);
                 }
@@ -102,7 +114,6 @@ impl Machine {
             State::CheckStatus => {
                 if self.read().is_some() {
                     self.last_address += 1;
-                    log!(self.debug, "> Send address {} CMD", self.last_address);
                     self.state = State::Address;
                     self.output.write(output::Frame::Address(self.last_address));
                 }
@@ -111,46 +122,57 @@ impl Machine {
                 if self.read().is_some() {
                     match self.mode {
                         Mode::Read => {
-                            log!(self.debug, "> Send read CMD");
-                            self.state = State::Read(0);
+                            self.state = State::Read;
                             self.output.write(output::Frame::Read);
                         }
                         Mode::Write => {
-                            log!(self.debug, "> Send write CMD");
-                            self.state = State::Write(0);
+                            self.state = State::Write;
                             self.output.write(output::Frame::Write);
                         }
                     }
                 }
             }
-            State::Read(mut count) => {
+            State::Read => {
+                if self.read().is_some() {
+                    self.state = State::ReadData(1);
+                    self.output.write(output::Frame::ReadData);
+                }
+            }
+            State::ReadData(mut count) => {
                 if let Some(data) = self.read() {
-                    if count < self.max_bytes {
-                        count += 1;
-
-                        if count > 1 {
-                            log!(self.debug, "< Read {}: {}", count, data);
+                    if data == count as u16 - 1 {
+                        self.last_received = data;
+                        if count < self.transfers {
+                            count += 1;
+                            self.state = State::ReadData(count);
+                            self.output.write(output::Frame::ReadData);
+                        } else {
+                            self.state = State::Stop;
+                            self.output.write(output::Frame::Stop);
                         }
-
-                        self.state = State::Read(count);
-                        self.output.write(output::Frame::ReadData);
                     } else {
-                        log!(self.debug, "< Read {}: {}", count, data);
-                        log!(self.debug, "> Send stop CMD");
-                        self.state = State::Stop;
-                        self.output.write(output::Frame::Stop);
+                        defmt::println!(
+                            "Invalid data read, expected: {}, received: {}, last received {}",
+                            count,
+                            data,
+                            self.last_received,
+                        );
                     }
                 }
             }
-            State::Write(mut data) => {
+            State::Write => {
                 if self.read().is_some() {
-                    if data < self.max_bytes {
-                        data += 1;
-                        log!(self.debug, "Send write data: {}", data);
-                        self.state = State::Write(data);
-                        self.output.write(output::Frame::WriteData(data));
+                    self.state = State::WriteData(1);
+                    self.output.write(output::Frame::WriteData(0));
+                }
+            }
+            State::WriteData(count) => {
+                if self.read().is_some() {
+                    if count < self.transfers {
+                        self.state = State::WriteData(count + 1);
+                        self.output.write(output::Frame::WriteData(count as u16));
                     } else {
-                        log!(self.debug, "Send stop");
+                        defmt::println!("Done, last sent data {}", count - 1);
                         self.state = State::Stop;
                         self.output.write(output::Frame::Stop);
                     }
@@ -159,8 +181,11 @@ impl Machine {
             State::Stop => {
                 if self.read().is_some() {
                     match self.mode {
-                        Mode::Write => defmt::println!("Write emulation completed"),
-                        Mode::Read => defmt::println!("Read emulation completed"),
+                        Mode::Write => defmt::println!("Write simulation completed"),
+                        Mode::Read => defmt::println!(
+                            "Read simulation completed, last received {}",
+                            self.last_received
+                        ),
                     }
                 }
             }
@@ -168,8 +193,9 @@ impl Machine {
     }
 
     pub fn stop(&mut self) {
-        log!(self.debug, "Send STOP");
         self.state = State::Stop;
+        self.last_address = 0;
+        self.last_received = 0;
         self.output.write(output::Frame::Stop);
     }
 
@@ -186,6 +212,7 @@ impl Machine {
 
     fn start(&mut self) {
         self.led.set_high();
+        self.last_data = 0;
         self.state = State::Ready;
         self.step();
     }
