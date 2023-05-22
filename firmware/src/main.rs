@@ -26,7 +26,12 @@ mod app {
     struct Local {
         adapter: adapter::Device,
         dtli: gpio::PB13<gpio::Input<gpio::PullDown>>,
-        indicators: indicators::Indicators,
+    }
+
+    macro_rules! into_output {
+        ($pin:expr, $cr:expr) => {
+            $pin.into_push_pull_output_with_state($cr, gpio::PinState::High)
+        };
     }
 
     #[init]
@@ -49,6 +54,20 @@ mod app {
         let mut gpioc = cx.device.GPIOC.split();
         let mut gpiod = cx.device.GPIOD.split();
         let mut gpioe = cx.device.GPIOE.split();
+
+        // Configure LED indicators
+        let pins = indicators::Pins {
+            system_error: into_output!(gpioa.pa0, &mut gpioa.crl),
+            write: into_output!(gpioa.pa1, &mut gpioa.crl),
+            read: into_output!(gpioa.pa2, &mut gpioa.crl),
+        };
+
+        let mut indicators = indicators::Indicators::new(pins);
+
+        // Indicate adapter startup
+        indicators.system_error_on();
+        indicators.write_on();
+        indicators.read_on();
 
         // Disable JTAG
         let (pa15, _pb3, pb4) = afio.mapr.disable_jtag(gpioa.pa15, gpiob.pb3, gpiob.pb4);
@@ -79,12 +98,6 @@ mod app {
         };
 
         let input = sm2m::input::Bus::new(pins);
-
-        macro_rules! into_output {
-            ($pin:expr, $cr:expr) => {
-                $pin.into_push_pull_output_with_state($cr, gpio::PinState::High)
-            };
-        }
 
         // Configure SM2M output bus
         let pins = sm2m::output::Pins {
@@ -137,26 +150,14 @@ mod app {
         let sdmmc_spi = embedded_sdmmc::SdMmcSpi::new(sdmmc_spi, sdmmc_cs_pin);
         let card = sdmmc::Card::new(sdmmc_spi, sdmmc_detect_pin);
 
+        // Indicate adapter setup completion
+        cortex_m::delay::Delay::new(cx.core.SYST, 72_000_000).delay_ms(200);
+        indicators.system_error_off();
+        indicators.write_off();
+        indicators.read_off();
+
         // Create adapter
-        let adapter = adapter::Device::new(input, output, card);
-
-        // Configure LED indicators
-        let pins = indicators::Pins {
-            system_error: into_output!(gpioa.pa0, &mut gpioa.crl),
-            write: into_output!(gpioa.pa1, &mut gpioa.crl),
-            read: into_output!(gpioa.pa2, &mut gpioa.crl),
-        };
-
-        let mut indicators = indicators::Indicators::new(pins);
-
-        // Indicate adapter startup
-        // self.system_error_on();
-        // self.write_on();
-        // self.read_on();
-        // cortex_m::asm::delay(72_000_000);
-        // self.system_error_off();
-        // self.write_off();
-        // self.read_off();
+        let adapter = adapter::Device::new(input, output, card, indicators);
 
         // Enable SM2M bus interrupt
         let mut dtli = gpiob.pb13.into_pull_down_input(&mut gpiob.crh); // DTLI
@@ -164,15 +165,7 @@ mod app {
         dtli.trigger_on_edge(&mut cx.device.EXTI, gpio::Edge::Falling);
         dtli.enable_interrupt(&mut cx.device.EXTI);
 
-        (
-            Shared {},
-            Local {
-                adapter,
-                dtli,
-                indicators,
-            },
-            init::Monotonics(),
-        )
+        (Shared {}, Local { adapter, dtli }, init::Monotonics())
     }
 
     #[idle]
@@ -186,7 +179,6 @@ mod app {
     #[task(binds = EXTI15_10, local = [
             adapter,
             dtli,
-            indicators,
         ])]
     fn dtli(cx: dtli::Context) {
         cx.local.adapter.run();

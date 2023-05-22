@@ -3,6 +3,7 @@ use crate::{
     peripherals::{
         sdmmc,
         sm2m::{input, output},
+        Indicators,
     },
 };
 
@@ -20,6 +21,7 @@ pub struct Device {
     input: input::Bus,
     output: output::Bus,
     card: sdmmc::Card,
+    indicators: Indicators,
     mode: Mode,
     file_name: sdmmc::FileName,
     buf: [u8; IO_BUFFER_SIZE],
@@ -28,11 +30,17 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn new(input: input::Bus, output: output::Bus, card: sdmmc::Card) -> Self {
+    pub fn new(
+        input: input::Bus,
+        output: output::Bus,
+        card: sdmmc::Card,
+        indicators: Indicators,
+    ) -> Self {
         Self {
             input,
             output,
             card,
+            indicators,
             mode: Mode::Ready,
             file_name: sdmmc::FileName::new(),
             buf: [0; IO_BUFFER_SIZE],
@@ -58,6 +66,9 @@ impl Device {
         self.buf_pos = 0;
         self.file_pos = 0;
         self.mode = Mode::Ready;
+        self.indicators.system_error_off();
+        self.indicators.write_off();
+        self.indicators.read_off();
         self.output.write(output::Frame::Ack);
     }
 
@@ -66,6 +77,8 @@ impl Device {
             self.handle_dump_payload();
         }
 
+        self.indicators.write_off();
+        self.indicators.read_off();
         self.handle_reset();
     }
 
@@ -106,6 +119,7 @@ impl Device {
             Ok(size) => {
                 self.file_pos = size;
                 self.mode = Mode::Read;
+                self.indicators.read_on();
                 self.output.write(output::Frame::Ack);
             }
             Err(error) => self.handle_error(error),
@@ -116,6 +130,7 @@ impl Device {
         match self.remove_file() {
             Ok(_) => {
                 self.mode = Mode::Write;
+                self.indicators.write_on();
                 self.output.write(output::Frame::Ack);
             }
             Err(error) => self.handle_error(error),
@@ -194,6 +209,7 @@ impl Device {
     fn handle_error<T: Into<u16>>(&mut self, error: T) {
         let opcode = error.into();
         self.mode = Mode::Error(opcode);
+        self.indicators.system_error_on();
         self.output.write(output::Frame::Error(opcode));
     }
 }
