@@ -1313,6 +1313,10 @@
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 82a222fa-c1c6-40b3-85ad-a47281c7300f)
   )
+  (text "Cload = 2 * (CL - Cstray)\nCL = 10pF\nCstray = 5pF" (at 34.29 99.06 0)
+    (effects (font (size 1.27 1.27)) (justify left bottom))
+    (uuid a7141776-c2b3-4f98-8432-96b21a2b6f4a)
+  )
   (text "Place each capacitor as close as possible\nto the corresponding MCU power pin."
     (at 226.06 48.26 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
@@ -1748,6 +1752,11 @@
     )
     (pin "1" (uuid 8247e251-6e94-414a-a889-b19be15799dd))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "#PWR03") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "#PWR03") (unit 1)
@@ -1776,6 +1785,11 @@
     )
     (pin "1" (uuid 83f84105-f717-441c-bbd7-16451e04eaa9))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "#PWR01") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "#PWR01") (unit 1)
@@ -1805,6 +1819,11 @@
     (pin "1" (uuid 94bc218b-9446-4342-a485-87e87cebcb07))
     (pin "2" (uuid 401f37e7-32ba-4ee6-a542-e59164b3a517))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "C1") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "C1") (unit 1)
@@ -1837,6 +1856,11 @@
     (pin "1" (uuid 2c7f27b2-ac56-41c0-a622-01c57fc8fda2))
     (pin "2" (uuid a4261ffd-56e8-4221-91fe-185087685347))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "C4") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "C4") (unit 1)
@@ -1868,6 +1892,11 @@
     )
     (pin "1" (uuid f3abd123-1c35-42e1-a2b3-eb972be33cb0))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "#PWR02") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "#PWR02") (unit 1)
@@ -1899,6 +1928,11 @@
     (pin "3" (uuid 67cb67b6-785c-44bf-a811-323ca5483ac9))
     (pin "4" (uuid 40453891-462e-4762-9dd8-ce221091d6a4))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "Y1") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "Y1") (unit 1)
@@ -1931,6 +1965,11 @@
     (pin "1" (uuid bb72ee80-9f1e-4b56-9779-ade55c6781cc))
     (pin "2" (uuid b6c26993-dae9-4cbd-a876-07abc0604c0d))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "C10") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "C10") (unit 1)
@@ -1963,6 +2002,11 @@
     (pin "1" (uuid 780ef6e9-f6cf-4319-b52e-8a4a7508a8d2))
     (pin "2" (uuid b39b42d4-1601-4dbf-8069-219eb4483143))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "C9") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "C9") (unit 1)
@@ -1994,6 +2038,11 @@
     )
     (pin "1" (uuid 2c6e500f-1426-4544-94d5-d43dc2cf016f))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "#PWR07") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "#PWR07") (unit 1)
@@ -2025,6 +2074,11 @@
     )
     (pin "1" (uuid 567977df-1fd0-4e8d-89fd-91d9bede7394))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "#PWR08") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "#PWR08") (unit 1)
@@ -2155,6 +2209,11 @@
     (pin "98" (uuid e804c641-05b9-40a6-a64a-b8d134f0acae))
     (pin "99" (uuid 4cafb170-4fef-48fc-9e60-280b77e5e99f))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "U1") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "U1") (unit 1)
@@ -2184,6 +2243,11 @@
     (pin "1" (uuid f054add8-3e2e-4ed8-a3c6-c62175dcfedc))
     (pin "2" (uuid 22b1dce3-13ab-4f00-9f97-fd1e97798001))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "R2") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "R2") (unit 1)
@@ -2216,6 +2280,11 @@
     (pin "1" (uuid 303ff5f7-d4c2-4fb0-a62b-6faf6b82ef2f))
     (pin "2" (uuid a377b4f2-c50a-4b2e-ad43-bfd71b7b3488))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "C11") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "C11") (unit 1)
@@ -2248,6 +2317,11 @@
     (pin "1" (uuid aafe6b83-c6a6-4c18-a616-14cf695193e6))
     (pin "2" (uuid bb261a95-f5ab-403d-a649-bf87508653c1))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "C3") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "C3") (unit 1)
@@ -2280,6 +2354,11 @@
     (pin "1" (uuid a1348912-8946-4328-b102-196a21e2569b))
     (pin "2" (uuid 9c93a65c-e44b-4650-8981-57ea9a969c8a))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "C8") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "C8") (unit 1)
@@ -2312,6 +2391,11 @@
     (pin "1" (uuid db756fc0-8f6f-4b4e-a5e2-d790f59c7a81))
     (pin "2" (uuid 385d505f-41ff-4c4d-92ce-45072a7ca008))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "R1") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "R1") (unit 1)
@@ -2340,6 +2424,11 @@
     )
     (pin "1" (uuid 4468d477-0bf2-4759-a0d9-8389e5b24dfe))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "#PWR012") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "#PWR012") (unit 1)
@@ -2371,6 +2460,11 @@
     )
     (pin "1" (uuid 23a2961a-8ca3-488c-a04a-77c9b88f5882))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "#PWR05") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "#PWR05") (unit 1)
@@ -2400,6 +2494,11 @@
     (pin "1" (uuid b0140ba2-ec8a-4e42-ad04-4b37bc933ff8))
     (pin "2" (uuid f0d9c44f-f677-4d24-8d60-20e8de3d4a6f))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "C6") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "C6") (unit 1)
@@ -2432,6 +2531,11 @@
     (pin "1" (uuid eb2ab40e-7faa-4499-bedd-c7394d67da45))
     (pin "2" (uuid 42fa56d0-81e3-4348-ad35-fce7c20987ec))
     (instances
+      (project "mcu"
+        (path "/7ba6d20e-1385-4286-b502-a3e0158344bc"
+          (reference "C5") (unit 1)
+        )
+      )
       (project "schematics"
         (path "/f7adfc90-8c40-4d6c-a6d1-57f90b6d3e95"
           (reference "C5") (unit 1)
@@ -2444,5 +2548,9 @@
         )
       )
     )
+  )
+
+  (sheet_instances
+    (path "/" (page "1"))
   )
 )
